@@ -32,7 +32,7 @@ class _BasescreensState extends State<Basescreens> {
                     width: 10,
                   ),
                   Text(
-                    "MEET YARAH",
+                    "SOCIAL MEDIA",
                     style: GoogleFonts.bebasNeue(  // ✅ font name
                       fontSize: 30,
                       color: ColorPath.deepBlue,

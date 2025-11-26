@@ -7,6 +7,7 @@ import 'package:meetyarah/ui/home/models/get_post_model.dart';
 import 'package:meetyarah/ui/home/screens/baseScreens.dart';
 import 'package:meetyarah/ui/login_reg_screens/controllers/auth_controller.dart';
 import 'package:meetyarah/ui/login_reg_screens/screens/login_screen.dart';
+import 'package:meetyarah/ui/reels/screens/reel_screens.dart';
 import 'package:meetyarah/ui/splashScreens/screens/splash_screens.dart';
 import 'package:meetyarah/ui/view_post/screens/post_details.dart';
 
@@ -70,8 +71,7 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      // স্প্ল্যাশ স্ক্রিন দিয়ে শুরু হবে
-      home: const SplashScreen(),
+      home: ReelScreens(),
     );
   }
 }

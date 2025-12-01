@@ -7,10 +7,17 @@ class AdsterraConfigs {
   static const String keyNative = "8e8a276d393bb819af043954cc38995b";
   static const String srcSocialBar =
       "https://pl25522730.effectivegatecpm.com/dd/4f/78/dd4f7878c3a97f6f9e08bdf8911ad44b.js";
+  // static const String monetagHomeLink =
+  //     "https://otieu.com/4/10229034";
+  // static const String monetagPlayerLink =
+  //     "https://otieu.com/4/10228985";
+  //
+
+
   static const String monetagHomeLink =
-      "https://otieu.com/4/10229034";
+      "https://www.effectivegatecpm.com/an90473c2?key=8d080fc227ce9b5ddb7bd690437b6d2c";
   static const String monetagPlayerLink =
-      "https://otieu.com/4/10228985";
+      "https://www.effectivegatecpm.com/an90473c2?key=8d080fc227ce9b5ddb7bd690437b6d2c";
 
   //
   // // 👉 লিংক ১: মেইন লিস্ট বা রিলস স্ক্রিনের জন্য

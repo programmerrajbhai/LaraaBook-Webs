@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:video_player/video_player.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+
 import '../../../adsterra/adsterra_configs.dart';
 import '../ads/AdWebViewScreen.dart';
 
@@ -20,363 +23,267 @@ class FullVideoPlayerScreen extends StatefulWidget {
 }
 
 class _FullVideoPlayerScreenState extends State<FullVideoPlayerScreen> {
-  late VideoPlayerController _controller;
-  bool _isInitialized = false;
-  bool _showControls = true;
-  bool _isDragging = false;
-  double _sliderValue = 0.0;
-  bool _isFullScreen = false;
+  late WebViewController _webViewController;
+  bool _isLoading = true;
   bool _showRecommendations = false;
-  late String _currentVideoUrl;
+
+  // লজিক ভেরিয়েবল
+  Timer? _progressTimer;
+  bool _hasShownAt30s = false; // ৩০ সেকেন্ডে একবার দেখানো হয়েছে কিনা
+  double _currentVideoDuration = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _currentVideoUrl = widget.initialVideoUrl;
-    _initializePlayer(_currentVideoUrl);
+    // পোর্ট্রেট মোড ফিক্সড রাখা
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    _initializeWebView(widget.initialVideoUrl);
   }
 
-  Future<void> _initializePlayer(String url) async {
-    if (_isInitialized) await _controller.dispose();
+  void _initializeWebView(String url) {
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.black)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (mounted) {
+              setState(() => _isLoading = false);
+              // ভিডিও লোড হলে টাইমার চালু হবে যা প্রতি ১ সেকেন্ডে চেক করবে
+              _startProgressChecker();
+            }
+          },
+        ),
+      );
 
-    setState(() {
-      _isInitialized = false;
-      _showRecommendations = false;
+    if (_webViewController.platform is AndroidWebViewController) {
+      AndroidWebViewController.enableDebugging(false); // ডিবাগ অফ (ফাস্ট লোডিংয়ের জন্য)
+      (_webViewController.platform as AndroidWebViewController)
+          .setMediaPlaybackRequiresUserGesture(false);
+    }
+
+    _webViewController.loadHtmlString(_getVideoHtml(url));
+  }
+
+  // জাভাস্ক্রিপ্ট দিয়ে ভিডিওর টাইম চেক করা
+  void _startProgressChecker() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      try {
+        // ১. বর্তমান সময় নেওয়া (Current Time)
+        final currentTimeStr = await _webViewController.runJavaScriptReturningResult(
+            "document.getElementById('myVideo').currentTime");
+        // ২. মোট সময় নেওয়া (Duration)
+        final durationStr = await _webViewController.runJavaScriptReturningResult(
+            "document.getElementById('myVideo').duration");
+
+        double currentTime = double.tryParse(currentTimeStr.toString()) ?? 0.0;
+        double duration = double.tryParse(durationStr.toString()) ?? 0.0;
+
+        _currentVideoDuration = duration;
+
+        // --- লজিক ১: ৩০ সেকেন্ড পার হলে ---
+        if (currentTime > 30 && !_hasShownAt30s && !_showRecommendations) {
+          setState(() {
+            _showRecommendations = true;
+            _hasShownAt30s = true; // ফ্ল্যাগ সেট করা যাতে বারবার ওপেন না হয়
+          });
+        }
+
+        // --- লজিক ২: শেষ ১০ সেকেন্ড বাকি থাকলে ---
+        if (duration > 0 && (duration - currentTime) <= 10 && !_showRecommendations) {
+          // যদি ইউজার ম্যানুয়ালি বন্ধ না করে থাকে, তবে আবার দেখাও
+          if(currentTime > (duration - 9)) { // একদম শেষের দিকে জাস্ট একবার ট্রিগার
+            setState(() {
+              _showRecommendations = true;
+            });
+          }
+        }
+
+      } catch (e) {
+        // ভিডিও লোড না হলে ইগনোর করবে
+      }
     });
-
-    _controller = VideoPlayerController.networkUrl(Uri.parse(url));
-    await _controller.initialize();
-
-    if (mounted) {
-      setState(() {
-        _isInitialized = true;
-        _controller.play();
-      });
-    }
-
-    _controller.addListener(_videoListener);
   }
 
-  void _videoListener() {
-    if (!mounted || _isDragging) return;
-    final duration = _controller.value.duration;
-    final position = _controller.value.position;
-    final remaining = duration - position;
-    final showRec = remaining.inSeconds <= 15 && duration.inSeconds > 0;
+  String _getVideoHtml(String url) {
+    return '''
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { margin: 0; background-color: black; height: 100vh; display: flex; align-items: center; justify-content: center; }
+          video { width: 100%; height: 100%; object-fit: contain; }
+          /* ডিফল্ট প্লেয়ার কন্ট্রোল স্টাইল */
+          video::-webkit-media-controls-panel { background-image: linear-gradient(transparent, rgba(0,0,0,0.5)); }
+        </style>
+      </head>
+      <body>
+        <video id="myVideo" controls autoplay playsinline name="media">
+          <source src="$url" type="video/mp4">
+        </video>
+      </body>
+      </html>
+    ''';
+  }
 
-    if (showRec != _showRecommendations) {
-      setState(() => _showRecommendations = showRec);
-    }
-    if (position.inSeconds != _sliderValue.toInt()) {
-      setState(() {});
-    }
+  void _playSuggestedVideo(String url) {
+    _progressTimer?.cancel(); // আগের টাইমার বন্ধ
+    Get.off(() => AdWebViewScreen(
+      adLink: AdsterraConfigs.monetagPlayerLink,
+      targetVideoUrl: url,
+      allVideos: widget.allVideos,
+    ));
+  }
+
+  void _onBackPress() {
+    _progressTimer?.cancel();
+    Get.back();
   }
 
   @override
   void dispose() {
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _controller.removeListener(_videoListener);
-    _controller.dispose();
+    _progressTimer?.cancel();
     super.dispose();
-  }
-
-  void _toggleFullScreen() {
-    setState(() => _isFullScreen = !_isFullScreen);
-    if (_isFullScreen) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
-  }
-
-  void _onBackPress() {
-    if (_isFullScreen) {
-      _toggleFullScreen();
-    } else {
-      Get.back();
-    }
-  }
-
-  // ✅ সাজেশন ক্লিক লজিক
-  void _playSuggestedVideo(String url) {
-    _controller.pause();
-    Get.to(
-      () => AdWebViewScreen(
-        adLink: AdsterraConfigs.monetagPlayerLink, // Player Link
-        targetVideoUrl: url,
-        allVideos: widget.allVideos,
-      ),
-    );
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return duration.inHours > 0
-        ? "$hours:$minutes:$seconds"
-        : "$minutes:$seconds";
   }
 
   @override
   Widget build(BuildContext context) {
-    final duration = _isInitialized
-        ? _controller.value.duration.inMilliseconds.toDouble()
-        : 0.0;
-    final position = _isInitialized
-        ? _controller.value.position.inMilliseconds.toDouble()
-        : 0.0;
+    final suggestions = widget.allVideos
+        .where((url) => url != widget.initialVideoUrl)
+        .toList();
 
     return PopScope(
-      canPop: !_isFullScreen,
+      canPop: false,
       onPopInvoked: (didPop) {
-        if (_isFullScreen) _toggleFullScreen();
+        if (!didPop) _onBackPress();
       },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
           child: Stack(
             children: [
+              // 1. Video Player Layer
               Center(
-                child: _isInitialized
-                    ? GestureDetector(
-                        onTap: () =>
-                            setState(() => _showControls = !_showControls),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            InteractiveViewer(
-                              panEnabled: false,
-                              minScale: 1.0,
-                              maxScale: 4.0,
-                              child: Center(
-                                child: AspectRatio(
-                                  aspectRatio: _controller.value.aspectRatio,
-                                  child: VideoPlayer(_controller),
-                                ),
-                              ),
-                            ),
-                            if (_showControls)
-                              _buildControls(duration, position),
-                          ],
-                        ),
-                      )
-                    : const CircularProgressIndicator(color: Colors.white),
+                child: WebViewWidget(controller: _webViewController),
               ),
-              if (_showRecommendations) _buildRecommendationOverlay(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildControls(double duration, double position) {
-    return Container(
-      color: Colors.black.withOpacity(0.4),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Align(
-            alignment: Alignment.topLeft,
-            child: IconButton(
-              onPressed: _onBackPress,
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                onPressed: () {
-                  final pos = _controller.value.position;
-                  _controller.seekTo(pos - const Duration(seconds: 10));
-                },
-                icon: const Icon(
-                  Icons.replay_10,
-                  color: Colors.white,
-                  size: 36,
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  if (_controller.value.position >=
-                      _controller.value.duration) {
-                    _controller.seekTo(Duration.zero);
-                    _controller.play();
-                  } else {
-                    _controller.value.isPlaying
-                        ? _controller.pause()
-                        : _controller.play();
-                  }
-                },
-                icon: Icon(
-                  _controller.value.position >= _controller.value.duration
-                      ? Icons.replay
-                      : (_controller.value.isPlaying
-                            ? Icons.pause
-                            : Icons.play_arrow),
-                  color: Colors.white,
-                  size: 50,
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  final pos = _controller.value.position;
-                  _controller.seekTo(pos + const Duration(seconds: 10));
-                },
-                icon: const Icon(
-                  Icons.forward_10,
-                  color: Colors.white,
-                  size: 36,
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: Colors.redAccent,
-                    inactiveTrackColor: Colors.white24,
-                    trackHeight: 4.0,
-                    thumbColor: Colors.red,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 8.0,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 16.0,
-                    ),
+              // 2. Loading Indicator
+              if (_isLoading)
+                const Center(child: CircularProgressIndicator(color: Colors.red)),
+
+              // 3. Control Buttons (Back & Playlist)
+              Positioned(
+                top: 10,
+                left: 10,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black45,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: _onBackPress,
                   ),
-                  child: Slider(
-                    min: 0.0,
-                    max: duration,
-                    value: _isDragging
-                        ? _sliderValue
-                        : position.clamp(0.0, duration),
-                    onChanged: (value) => setState(() {
-                      _isDragging = true;
-                      _sliderValue = value;
-                    }),
-                    onChangeEnd: (value) {
-                      _controller.seekTo(Duration(milliseconds: value.toInt()));
-                      setState(() => _isDragging = false);
+                ),
+              ),
+
+              Positioned(
+                top: 10,
+                right: 10,
+                child: CircleAvatar(
+                  backgroundColor: Colors.black45,
+                  child: IconButton(
+                    icon: Icon(
+                        _showRecommendations ? Icons.close : Icons.playlist_play,
+                        color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _showRecommendations = !_showRecommendations;
+                      });
                     },
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "${_formatDuration(_controller.value.position)} / ${_formatDuration(_controller.value.duration)}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _toggleFullScreen,
-                      icon: Icon(
-                        _isFullScreen
-                            ? Icons.fullscreen_exit
-                            : Icons.fullscreen,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendationOverlay() {
-    final suggestions = widget.allVideos
-        .where((url) => url != _currentVideoUrl)
-        .toList();
-    if (suggestions.isEmpty) return const SizedBox.shrink();
-
-    return Positioned(
-      right: 0,
-      top: 60,
-      bottom: 100,
-      width: 170,
-      child: AnimatedOpacity(
-        opacity: _showRecommendations ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 500),
-        child: Container(
-          margin: const EdgeInsets.only(right: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.85),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 10, left: 4),
-                child: Text(
-                  "Up Next",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
               ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: suggestions.length,
-                  itemBuilder: (context, index) {
-                    final url = suggestions[index];
-                    return GestureDetector(
-                      onTap: () => _playSuggestedVideo(url),
-                      child: Container(
-                        height: 100,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white12),
-                          color: Colors.grey[900],
+
+              // 4. Recommendations Sidebar (Animated)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                right: _showRecommendations ? 0 : -220, // স্লাইড ইফেক্ট
+                top: 60,
+                bottom: 20,
+                width: 200,
+                child: Container(
+                  margin: const EdgeInsets.only(right: 5),
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.85), // একটু স্বচ্ছ
+                    borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(15),
+                        bottomLeft: Radius.circular(15)
+                    ),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10, left: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Up Next", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                            // ছোট টাইমার দেখা যেতে পারে যদি দরকার হয়
+                            if(_currentVideoDuration > 0)
+                              const Icon(Icons.auto_awesome, color: Colors.amber, size: 14)
+                          ],
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              _SimpleThumbnail(videoUrl: url),
-                              Container(
-                                padding: const EdgeInsets.all(6),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: suggestions.length,
+                          itemBuilder: (context, index) {
+                            final url = suggestions[index];
+                            return GestureDetector(
+                              onTap: () => _playSuggestedVideo(url),
+                              child: Container(
+                                height: 100,
+                                margin: const EdgeInsets.only(bottom: 10),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
-                                  shape: BoxShape.circle,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.white10),
+                                  color: Colors.grey[900],
                                 ),
-                                child: const Icon(
-                                  Icons.play_arrow,
-                                  color: Colors.white,
-                                  size: 24,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      // সুপার ফাস্ট থাম্বনেইল উইজেট
+                                      _OptimizedWebViewThumbnail(videoUrl: url),
+
+                                      // প্লে আইকন
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.5),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.play_arrow, color: Colors.white, size: 22),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -387,69 +294,49 @@ class _FullVideoPlayerScreenState extends State<FullVideoPlayerScreen> {
   }
 }
 
-class _SimpleThumbnail extends StatefulWidget {
+// -----------------------------------------------------------------------------
+// অপ্টিমাইজড থাম্বনেইল ক্লাস (ন্যানো সেকেন্ড স্পিড ফিল দেওয়ার জন্য)
+// -----------------------------------------------------------------------------
+class _OptimizedWebViewThumbnail extends StatefulWidget {
   final String videoUrl;
-  const _SimpleThumbnail({required this.videoUrl});
+  const _OptimizedWebViewThumbnail({required this.videoUrl});
 
   @override
-  State<_SimpleThumbnail> createState() => _SimpleThumbnailState();
+  State<_OptimizedWebViewThumbnail> createState() => _OptimizedWebViewThumbnailState();
 }
 
-class _SimpleThumbnailState extends State<_SimpleThumbnail>
-    with AutomaticKeepAliveClientMixin {
-  late VideoPlayerController _thumbController;
-  bool _loaded = false;
+class _OptimizedWebViewThumbnailState extends State<_OptimizedWebViewThumbnail> with AutomaticKeepAliveClientMixin {
+  late WebViewController _controller;
 
   @override
   void initState() {
     super.initState();
-    _thumbController =
-        VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-          ..setVolume(0.0)
-          ..initialize().then((_) {
-            if (mounted) {
-              setState(() => _loaded = true);
-              _thumbController.seekTo(const Duration(milliseconds: 100));
-              _thumbController.pause();
-            }
-          });
-  }
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.black); // লোড হওয়ার আগে কালো দেখাবে
 
-  @override
-  void dispose() {
-    _thumbController.dispose();
-    super.dispose();
+    // এখানে HTML কোডটিকে মিনিফাই করা হয়েছে যাতে দ্রুত লোড হয়
+    _controller.loadHtmlString('''
+        <html><body style="margin:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+        <video muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;">
+        <source src="${widget.videoUrl}" type="video/mp4"></video>
+        <script>
+        var v=document.querySelector('video');
+        v.addEventListener('loadedmetadata',function(){this.currentTime=0.5;}); // 0.1 এর বদলে 0.5 দিলে ফ্রেম ভালো আসে
+        </script></body></html>
+      ''');
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Container(
-      color: Colors.black,
-      child: _loaded
-          ? SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _thumbController.value.size.width,
-                  height: _thumbController.value.size.height,
-                  child: VideoPlayer(_thumbController),
-                ),
-              ),
-            )
-          : const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white30,
-                  strokeWidth: 2,
-                ),
-              ),
-            ),
+    return SizedBox.expand(
+      child: AbsorbPointer(
+        child: WebViewWidget(controller: _controller),
+      ),
     );
   }
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => true; // লিস্ট স্ক্রল করলেও লোডেড থাকবে
 }

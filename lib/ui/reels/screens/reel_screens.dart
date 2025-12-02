@@ -13,6 +13,7 @@ import '../../../adsterra/adsterra_configs.dart';
 import '../ads/AdWebViewScreen.dart';
 import '../profile_screens/screens/view_profile_screens.dart';
 
+
 class VideoDataModel {
   final String url;
   final String title;
@@ -33,16 +34,8 @@ class VideoDataModel {
   });
 }
 
-
-
-// ==========================================
-// 2. DATA GENERATOR (Real Girl Photos)
-// ==========================================
 class VideoDataHelper {
-
-  // 🔥 রিয়েল দেশি ও বিদেশি মেয়েদের ছবির ডাইরেক্ট লিংক
   static final List<String> _realProfileImages = [
-    // --- Desi / Indian / Bengali Look ---
     'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200',
     'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=200',
     'https://images.pexels.com/photos/1587009/pexels-photo-1587009.jpeg?auto=compress&cs=tinysrgb&w=200',
@@ -50,52 +43,26 @@ class VideoDataHelper {
     'https://images.pexels.com/photos/2613260/pexels-photo-2613260.jpeg?auto=compress&cs=tinysrgb&w=200',
     'https://images.pexels.com/photos/2773977/pexels-photo-2773977.jpeg?auto=compress&cs=tinysrgb&w=200',
     'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg?auto=compress&cs=tinysrgb&w=200',
-
-    // --- Bideshi / Western Look ---
     'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200',
     'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=200',
     'https://images.pexels.com/photos/1382731/pexels-photo-1382731.jpeg?auto=compress&cs=tinysrgb&w=200',
-    'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200',
-    'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=200',
-    'https://images.pexels.com/photos/3756679/pexels-photo-3756679.jpeg?auto=compress&cs=tinysrgb&w=200',
-    'https://images.pexels.com/photos/1024311/pexels-photo-1024311.jpeg?auto=compress&cs=tinysrgb&w=200',
-    'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200'
   ];
 
   static final List<String> _girlNames = [
     "Naughty Anika", "Desi Bhabi Vlogs", "Sexy Sophia", "Dream Girl Rimi",
     "Hot Bella", "Misty Night", "Sofia X", "Cute Puja",
-    "Viral Queen", "Midnight Lover", "Sunny Fan Club", "Sweet Taniya",
-    "Boudi Diaries", "Romance Hub", "Private Moments"
+    "Viral Queen", "Midnight Lover"
   ];
 
-  static final List<String> _titleStart = [
-    "OMG! My Ex", "Late Night", "Desi Bhabi", "College Girl", "Bathroom",
-    "Bedroom Secret", "First Night", "Private Room", "Hidden Cam", "Hot Yoga",
-    "Naughty", "Midnight", "Shower Time", "Hotel Room", "My Crush"
-  ];
-
-  static final List<String> _titleMiddle = [
-    "Forgot Camera Was ON 📸", "Leaked Video Viral", "Romance with BF",
-    "Changing Clothes 👗", "Towel Slipped 😱", "Video Call Record",
-    "Private Moment Caught", "Oil Massage Prank", "Uncut Scene", "Sleeping Alone",
-    "Live Stream Mistake", "Sending Nudes?", "Kissing Prank"
-  ];
-
-  static final List<String> _titleEnd = [
-    "🔥 | Too Hot", "❌ | Don't Tell Anyone", "🔞 | 18+ Only", "😱 | Viral Clip",
-    "🚫 | Watch Before Delete", "💦 | Satisfaction", "😈 | Very Naughty", "🔒 | Leaked",
-    "😍 | Must Watch"
-  ];
+  static final List<String> _titleStart = ["OMG! My Ex", "Late Night", "Desi Bhabi", "College Girl", "Bathroom", "Bedroom Secret"];
+  static final List<String> _titleMiddle = ["Forgot Camera Was ON 📸", "Leaked Video Viral", "Romance with BF", "Changing Clothes 👗"];
+  static final List<String> _titleEnd = ["🔥 | Too Hot", "❌ | Don't Tell Anyone", "🔞 | 18+ Only", "😱 | Viral Clip"];
 
   static List<VideoDataModel> generateVideos(int count) {
     var random = Random();
     return List.generate(count, (index) {
       int id = 64000 + index;
-
-      String dynamicTitle = "${_titleStart[random.nextInt(_titleStart.length)]} "
-          "${_titleMiddle[random.nextInt(_titleMiddle.length)]} "
-          "${_titleEnd[random.nextInt(_titleEnd.length)]}";
+      String dynamicTitle = "${_titleStart[random.nextInt(_titleStart.length)]} ${_titleMiddle[random.nextInt(_titleMiddle.length)]} ${_titleEnd[random.nextInt(_titleEnd.length)]}";
       String dynamicChannel = _girlNames[random.nextInt(_girlNames.length)];
 
       return VideoDataModel(
@@ -107,7 +74,6 @@ class VideoDataHelper {
         comments: "${random.nextInt(2000) + 500}",
         timeAgo: "${random.nextInt(12) + 1}h",
         duration: "${random.nextInt(15) + 4}:${random.nextInt(50) + 10}",
-        // 🔥 এখান থেকে র‍্যান্ডম রিয়েল ফটো পিক করবে
         profileImage: _realProfileImages[random.nextInt(_realProfileImages.length)],
         subscribers: "${(random.nextDouble() * 5 + 0.5).toStringAsFixed(1)}M",
       );
@@ -253,6 +219,11 @@ class _ReelScreensState extends State<ReelScreens> {
 // ==========================================
 // 4. FACEBOOK VIDEO CARD (PREMIUM LOADING UI)
 // ==========================================
+// এই ফাইলটি: lib/ui/reels/widgets/facebook_video_card.dart (আপনার লোকেশন অনুযায়ী)
+
+// VideoDataModel ক্লাসটি আপনার আগের কোডেই আছে, তাই এখানে আবার দিচ্ছি না।
+// সরাসরি FacebookVideoCard ক্লাস আপডেট করছি।
+
 class FacebookVideoCard extends StatefulWidget {
   final VideoDataModel videoData;
   final List<String> allVideosList;
@@ -281,7 +252,6 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.transparent)
-    // 🔥 Optimized Agent
       ..setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
       ..setNavigationDelegate(NavigationDelegate(onPageFinished: (_) { if(mounted) setState(() => _isLoading = false); }));
 
@@ -309,9 +279,13 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
     ''';
   }
 
+  // 🔥 এই ফাংশনটি আপডেট করা হয়েছে
   void _onTap() {
-    Get.to(() => FullVideoPlayerScreen(
-      initialVideoUrl: widget.videoData.url,
+    // সরাসরি ভিডিও প্লেয়ারে না গিয়ে, আগে অ্যাড স্ক্রিনে যাবে
+    Get.to(() => AdWebViewScreen(
+      // এখানে AdsterraConfigs থেকে আপনার Monetag Direct Link দিন
+      adLink: AdsterraConfigs.monetagHomeLink,
+      targetVideoUrl: widget.videoData.url,
       allVideos: widget.allVideosList,
     ));
   }
@@ -343,7 +317,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
             title: Text(video.channelName, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text("${video.timeAgo} · 🌎"),
             trailing: const Icon(Icons.more_horiz),
-            onTap: () => Get.to(() => ProfileViewScreen(videoData: video)),
+            onTap: () => Get.to(() => ProfileViewScreen()),
           ),
 
           // Title
@@ -354,7 +328,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
 
           // Video Preview Area (With Animation)
           GestureDetector(
-            onTap: _onTap,
+            onTap: _onTap, // 🔥 আপডেটেড ট্যাপ ফাংশন কল হবে
             onLongPressStart: (_) {
               HapticFeedback.selectionClick();
               setState(() { _isPreviewing = true; _scale = 1.02; });
@@ -372,32 +346,17 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
                 child: Stack(
                   children: [
                     WebViewWidget(controller: _webViewController),
-
                     Container(color: Colors.transparent), // Touch Blocker
 
-                    // 🔥 PREMIUM LOADING ANIMATION
                     if (_isLoading)
                       Container(
-                        color: Colors.black, // কালো ব্যাকগ্রাউন্ডের উপর লোডিং
+                        color: Colors.black,
                         child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // কাস্টম পালসিং আইকন
-                              TweenAnimationBuilder(
-                                tween: Tween(begin: 0.8, end: 1.2),
-                                duration: const Duration(milliseconds: 800),
-                                curve: Curves.easeInOut,
-                                builder: (context, value, child) {
-                                  return Transform.scale(
-                                    scale: value,
-                                    child: Icon(Icons.play_circle_fill, color: Colors.white.withOpacity(0.2), size: 60),
-                                  );
-                                },
-                                onEnd: () {}, // লুপের জন্য বা কনটিনিউয়াস রাখার জন্য আলাদা কন্ট্রোলার লাগবে, এখানে সিম্পল রাখা হলো
-                              ),
+                              const Icon(Icons.play_circle_fill, color: Colors.white24, size: 60),
                               const SizedBox(height: 20),
-                              // লোডিং টেক্সট বা স্পিনার
                               const SizedBox(
                                 width: 24, height: 24,
                                 child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2),
@@ -407,11 +366,9 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
                         ),
                       ),
 
-                    // Duration Badge
                     if (!_isPreviewing && !_isLoading)
                       Positioned(bottom: 10, right: 10, child: Container(padding: const EdgeInsets.all(4), color: Colors.black54, child: Text(video.duration, style: const TextStyle(color: Colors.white)))),
 
-                    // Preview Indicator
                     if (_isPreviewing)
                       const Center(child: Text("PREVIEW", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20, shadows: [Shadow(blurRadius: 10, color: Colors.black)]))),
                   ],
@@ -468,4 +425,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with AutomaticKee
   }
   @override bool get wantKeepAlive => true;
 }
+
+
+
 

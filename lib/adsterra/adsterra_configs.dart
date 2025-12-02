@@ -15,9 +15,9 @@ class AdsterraConfigs {
 
 
   static const String monetagHomeLink =
-      "https://www.effectivegatecpm.com/an90473c2?key=8d080fc227ce9b5ddb7bd690437b6d2c";
+      "https://www.effectivegatecpm.com/n90473c2?key=8d080fc227ce9b5ddb7bd690437b6d2c";
   static const String monetagPlayerLink =
-      "https://www.effectivegatecpm.com/an90473c2?key=8d080fc227ce9b5ddb7bd690437b6d2c";
+      "https://www.effectivegatecpm.com/n90473c2?key=8d080fc227ce9b5ddb7bd690437b6d2c";
 
   //
   // // 👉 লিংক ১: মেইন লিস্ট বা রিলস স্ক্রিনের জন্য

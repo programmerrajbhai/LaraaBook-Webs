@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:meetyarah/adsterra/adsterra_configs.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 // Android ফিচার ব্যবহারের জন্য
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -52,11 +53,14 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
       params = const PlatformWebViewControllerCreationParams();
     }
 
-    final WebViewController controller = WebViewController.fromPlatformCreationParams(params);
+    final WebViewController controller =
+        WebViewController.fromPlatformCreationParams(params);
 
     controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent) // ✅ ব্যাকগ্রাউন্ড স্বচ্ছ রাখলাম যাতে পেছনের 'Sponsored' লেখা দেখা যায়
+      ..setBackgroundColor(
+        Colors.transparent,
+      ) // ✅ ব্যাকগ্রাউন্ড স্বচ্ছ রাখলাম যাতে পেছনের 'Sponsored' লেখা দেখা যায়
       ..setUserAgent(_userAgent)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -75,15 +79,15 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
             // 🔥 প্লে-স্টোর বা অ্যাপ রিডাইরেক্ট ব্লক করা
             bool isStoreRedirect =
                 url.startsWith('market://') ||
-                    url.startsWith('intent://') ||
-                    url.contains('play.google.com') ||
-                    url.startsWith('itms-appss://') ||
-                    url.startsWith('deep_link');
+                url.startsWith('intent://') ||
+                url.contains('play.google.com') ||
+                url.startsWith('itms-appss://') ||
+                url.startsWith('deep_link');
 
             if (isStoreRedirect) {
               debugPrint("Blocked Auto-Redirect: $url");
               // আমরা রিডাইরেক্ট ব্লক করব এবং 'Sponsored' ব্যাকগ্রাউন্ড দেখাব
-              if(mounted) {
+              if (mounted) {
                 setState(() {
                   _isAdHidden = true;
                   _isLoading = false;
@@ -94,7 +98,7 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
 
             // ইউটিউব ব্লক
             if (url.contains('youtube.com') || url.contains('youtu.be')) {
-              if(mounted) setState(() => _isAdHidden = true);
+              if (mounted) setState(() => _isAdHidden = true);
               return NavigationDecision.prevent;
             }
 
@@ -105,7 +109,8 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
 
     // 🔥 Android স্পেসিফিক সেটিংস (স্ট্যান্ডার্ড API) 🔥
     if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewController androidController = controller.platform as AndroidWebViewController;
+      AndroidWebViewController androidController =
+          controller.platform as AndroidWebViewController;
       // ভিডিও বা সাউন্ড অটো প্লে হওয়ার জন্য
       androidController.setMediaPlaybackRequiresUserGesture(false);
 
@@ -134,11 +139,14 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
 
   void _skipAdAndPlayVideo() {
     _timer?.cancel();
-    Get.off(() => FullVideoPlayerScreen(
-      initialVideoUrl: widget.targetVideoUrl,
-      allVideos: widget.allVideos,
-    ),
-        transition: Transition.fadeIn);
+    Get.off(
+      () => FullVideoPlayerScreen(
+        initialVideoUrl: widget.targetVideoUrl,
+        allVideos: widget.allVideos,
+        adLink: AdsterraConfigs.monetagHomeLink,
+      ),
+      transition: Transition.fadeIn,
+    );
   }
 
   @override
@@ -171,16 +179,20 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
                         color: Colors.white10,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.star, size: 60, color: Colors.amber),
+                      child: const Icon(
+                        Icons.star,
+                        size: 60,
+                        color: Colors.amber,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                        "SPONSORED ADVERTISEMENT",
-                        style: TextStyle(
-                            color: Colors.white24,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.bold
-                        )
+                      "SPONSORED ADVERTISEMENT",
+                      style: TextStyle(
+                        color: Colors.white24,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -193,8 +205,7 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
 
               // 2. WebView (Ad Layer)
               // অ্যাড হাইড না হলে এটি দেখাবে
-              if (!_isAdHidden)
-                WebViewWidget(controller: _controller),
+              if (!_isAdHidden) WebViewWidget(controller: _controller),
 
               // 3. Loading Indicator
               if (_isLoading)
@@ -213,17 +224,23 @@ class _AdWebViewScreenState extends State<AdWebViewScreen> {
                   onTap: _canSkip ? _skipAdAndPlayVideo : null,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                            color: _canSkip ? Colors.greenAccent : Colors.white24,
-                            width: 1.5
+                      color: Colors.black.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: _canSkip ? Colors.greenAccent : Colors.white24,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 8,
                         ),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 8)
-                        ]
+                      ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

@@ -15,7 +15,7 @@ class FullVideoPlayerScreen extends StatefulWidget {
   const FullVideoPlayerScreen({
     super.key,
     required this.initialVideoUrl,
-    required this.allVideos,
+    required this.allVideos, required String adLink,
   });
 
   @override

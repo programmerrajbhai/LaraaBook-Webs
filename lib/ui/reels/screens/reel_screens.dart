@@ -8,9 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
 
+// ✅ আপনার ফোল্ডার স্ট্রাকচার অনুযায়ী ইম্পোর্ট পাথ চেক করে নিবেন
+import '../../../adsterra/adsterra_configs.dart';
 import '../ads/AdWebViewScreen.dart';
-
-// import 'profile_screens/screens/view_profile_screens.dart'; // লাগলে আনকমেন্ট করুন
 
 // ==========================================
 // 1. DATA MODEL
@@ -283,7 +283,6 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
   }
 
   void _initializeVideo() {
-    // Web এর জন্য https করে নেয়া নিরাপদ
     String url = widget.videoData.url.replaceFirst("http://", "https://");
     _controller = VideoPlayerController.networkUrl(Uri.parse(url))
       ..initialize().then((_) {
@@ -324,13 +323,15 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
     }
   }
 
-  // ✅ CLICK LOGIC: GO TO ADS
+  // ✅ CLICK LOGIC: GO TO ADS (Updated with Adsterra Config)
   void _openFullScreen() {
     _stopPreview();
     if(mounted) setState(() => _isNavigating = true);
 
     Get.to(() => AdWebViewScreen(
-      adLink: "https://www.google.com", // আপনার অ্যাড লিঙ্ক এখানে দিন
+      // 🔥🔥🔥 আপনার Adsterra লিংক এখানে বসানো হলো 🔥🔥🔥
+      adLink: AdsterraConfigs.monetagHomeLink,
+
       targetVideoUrl: widget.videoData.url,
       allVideos: widget.allVideosList,
     ))?.then((_) {
@@ -373,7 +374,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             leading: InkWell(
-              onTap: () {}, // প্রোফাইল স্ক্রিন লজিক থাকলে এখানে দিন
+              onTap: () {},
               child: Hero(
                 tag: video.url + video.channelName,
                 child: CircleAvatar(backgroundImage: NetworkImage(video.profileImage)),
@@ -391,11 +392,11 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
 
           const SizedBox(height: 5),
 
-          // ✅ INTERACTIVE VIDEO AREA
+          // ✅ Video Area
           GestureDetector(
             onLongPressStart: (_) => _startPreview(),
             onLongPressEnd: (_) => _stopPreview(),
-            onTap: _openFullScreen, // 👉 Tap করলে Ads এ যাবে
+            onTap: _openFullScreen, // 👉 Tap to Ad
             onDoubleTap: _onDoubleTapLike,
 
             child: Container(
@@ -409,6 +410,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                   children: [
                     VideoPlayer(_controller!),
 
+                    // Gradient
                     Positioned(
                       bottom: 0, left: 0, right: 0,
                       child: Container(
@@ -443,14 +445,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.9), borderRadius: BorderRadius.circular(20)),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.remove_red_eye, color: Colors.white, size: 14),
-                              SizedBox(width: 5),
-                              Text("Preview Mode", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
+                          child: const Text("Preview Mode", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                       ),
 

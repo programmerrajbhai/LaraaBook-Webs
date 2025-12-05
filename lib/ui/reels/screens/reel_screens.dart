@@ -103,7 +103,7 @@ class VideoDataHelper {
 }
 
 // ==========================================
-// 3. REEL SCREENS (SMART FEED UI)
+// 3. REEL SCREENS
 // ==========================================
 class ReelScreens extends StatefulWidget {
   const ReelScreens({super.key});
@@ -115,36 +115,19 @@ class _ReelScreensState extends State<ReelScreens> {
   List<VideoDataModel> _allVideos = [];
   bool _isLoading = true;
 
-  // Autoplay Logic
-  int _focusedIndex = 0;
+  // Note: Autoplay logic is removed as per new requirement (Preview on Hold)
   final ScrollController _scrollController = ScrollController();
-  // ওয়েব এবং মোবাইলের জন্য আলাদা হাইট এস্টিমেশন
-  double get _itemHeight => kIsWeb ? 600.0 : 500.0;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final offset = _scrollController.offset;
-    // ডাইনামিক হাইট ক্যালকুলেশন করে ইনডেক্স বের করা
-    final index = (offset / _itemHeight).round();
-
-    if (_focusedIndex != index) {
-      setState(() {
-        _focusedIndex = index;
-      });
-    }
   }
 
   void _loadData() async {
@@ -189,7 +172,6 @@ class _ReelScreensState extends State<ReelScreens> {
                     key: ValueKey(_allVideos[index].url),
                     videoData: _allVideos[index],
                     allVideosList: _allVideos.map((e) => e.url).toList(),
-                    shouldPlay: index == _focusedIndex,
                   ),
                 );
               },
@@ -208,19 +190,13 @@ class _ReelScreensState extends State<ReelScreens> {
       titleSpacing: kIsWeb ? 20 : 0,
       title: const Text(
         "facebook",
-        style: TextStyle(
-          color: Color(0xFF1877F2),
-          fontWeight: FontWeight.bold,
-          fontSize: 28,
-          letterSpacing: -1.2,
-        ),
+        style: TextStyle(color: Color(0xFF1877F2), fontWeight: FontWeight.bold, fontSize: 28, letterSpacing: -1.2),
       ),
       actions: [
         if (kIsWeb) ...[
           _webNavIcon(Icons.home, true),
           _webNavIcon(Icons.ondemand_video, false),
           _webNavIcon(Icons.storefront, false),
-          _webNavIcon(Icons.group, false),
           const SizedBox(width: 20),
         ],
         _circleButton(Icons.search),
@@ -238,11 +214,7 @@ class _ReelScreensState extends State<ReelScreens> {
       decoration: BoxDecoration(
         border: isActive ? const Border(bottom: BorderSide(color: Color(0xFF1877F2), width: 3)) : null,
       ),
-      child: Icon(
-        icon,
-        color: isActive ? const Color(0xFF1877F2) : Colors.grey[600],
-        size: 28,
-      ),
+      child: Icon(icon, color: isActive ? const Color(0xFF1877F2) : Colors.grey[600], size: 28),
     );
   }
 
@@ -254,10 +226,7 @@ class _ReelScreensState extends State<ReelScreens> {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle),
           child: Icon(icon, color: Colors.black, size: 22),
         ),
       ),
@@ -288,70 +257,31 @@ class _ReelScreensState extends State<ReelScreens> {
 }
 
 // ==========================================
-// 4. FACEBOOK VIDEO CARD (PRO FEATURES)
+// 4. FACEBOOK VIDEO CARD (PREVIEW ON HOLD & CLICK TO PLAY)
 // ==========================================
 class FacebookVideoCard extends StatefulWidget {
   final VideoDataModel videoData;
   final List<String> allVideosList;
-  final bool shouldPlay;
 
   const FacebookVideoCard({
     super.key,
     required this.videoData,
     required this.allVideosList,
-    required this.shouldPlay,
   });
 
   @override
   State<FacebookVideoCard> createState() => _FacebookVideoCardState();
 }
 
-class _FacebookVideoCardState extends State<FacebookVideoCard> with SingleTickerProviderStateMixin {
+class _FacebookVideoCardState extends State<FacebookVideoCard> {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
-  bool _isMuted = true;
-
-  // Animation States
-  bool _showHeart = false; // Double tap heart
-  bool _controlsVisible = true; // Auto hide controls
-  Timer? _hideTimer;
-
-  // Like Animation
-  late AnimationController _heartAnimationController;
-  late Animation<double> _heartScale;
+  bool _isPreviewing = false; // Track preview state
 
   @override
   void initState() {
     super.initState();
     _initializeVideo();
-
-    // Heart Animation Setup
-    _heartAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _heartScale = Tween<double>(begin: 0.0, end: 1.2).animate(
-        CurvedAnimation(parent: _heartAnimationController, curve: Curves.elasticOut)
-    );
-
-    _heartAnimationController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if(mounted) setState(() => _showHeart = false);
-          _heartAnimationController.reset();
-        });
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(FacebookVideoCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.shouldPlay != widget.shouldPlay) {
-      if (widget.shouldPlay) {
-        _controller?.play();
-        _startHideTimer();
-      } else {
-        _controller?.pause();
-      }
-    }
   }
 
   void _initializeVideo() {
@@ -360,74 +290,46 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with SingleTicker
       ..initialize().then((_) {
         if (mounted) {
           setState(() => _isInitialized = true);
-          if (widget.shouldPlay) {
-            _controller?.setVolume(_isMuted ? 0 : 1);
-            _controller?.play();
-            _controller?.setLooping(true);
-            _startHideTimer();
-          }
+          // Auto-play বন্ধ রাখা হয়েছে, শুধুমাত্র Preview এর সময় চলবে
+          _controller?.setLooping(true);
+          _controller?.setVolume(0); // Preview মিউট থাকবে (অপশনাল)
         }
       }).catchError((e) {
         debugPrint("Video Error: $e");
       });
   }
 
-  void _startHideTimer() {
-    _hideTimer?.cancel();
-    if(mounted) setState(() => _controlsVisible = true);
-    _hideTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted && _controller!.value.isPlaying) {
-        setState(() => _controlsVisible = false);
-      }
-    });
-  }
-
-  void _onDoubleTapLike() {
-    // Show Heart Animation
-    setState(() => _showHeart = true);
-    _heartAnimationController.forward();
-
-    // Haptic Feedback
-    HapticFeedback.mediumImpact();
-
-    // TODO: Call your Like API here
-  }
-
-  void _toggleMute() {
-    setState(() {
-      _isMuted = !_isMuted;
-      _controller?.setVolume(_isMuted ? 0 : 1);
-      _startHideTimer(); // Reset timer on interaction
-    });
-  }
-
-  void _togglePlayPause() {
-    if (_controller!.value.isPlaying) {
-      _controller?.pause();
-      setState(() => _controlsVisible = true); // Pause করলে কন্ট্রোল দেখাবে
-    } else {
+  // ✅ Step 1: Preview Logic (Long Press)
+  void _startPreview() {
+    if (_controller != null && _isInitialized) {
+      HapticFeedback.lightImpact(); // হালকা ভাইব্রেশন
+      setState(() => _isPreviewing = true);
       _controller?.play();
-      _startHideTimer();
     }
-    setState(() {});
   }
 
+  void _stopPreview() {
+    if (_controller != null && _isInitialized) {
+      setState(() => _isPreviewing = false);
+      _controller?.pause();
+    }
+  }
+
+  // ✅ Step 2: Full Screen Logic (Tap)
   void _openFullScreen() {
-    _controller?.pause();
+    // প্রিভিউ বন্ধ করে নতুন পেজে যাওয়া
+    _stopPreview();
+
     Get.to(() => AdWebViewScreen(
       adLink: AdsterraConfigs.monetagHomeLink,
       targetVideoUrl: widget.videoData.url,
       allVideos: widget.allVideosList,
-    ))?.then((_) {
-      if (widget.shouldPlay) _controller?.play();
-    });
+    ));
   }
 
   @override
   void dispose() {
     _controller?.dispose();
-    _heartAnimationController.dispose();
-    _hideTimer?.cancel();
     super.dispose();
   }
 
@@ -457,11 +359,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with SingleTicker
               child: Text(video.channelName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             subtitle: Text("${video.timeAgo} · 🌎", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            trailing: IconButton(
-              icon: const Icon(Icons.more_horiz),
-              onPressed: () {},
-              splashRadius: 20,
-            ),
+            trailing: const Icon(Icons.more_horiz),
           ),
 
           Padding(
@@ -471,16 +369,15 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with SingleTicker
 
           const SizedBox(height: 5),
 
-          // ✅ PRO VIDEO PLAYER AREA
+          // ✅ INTERACTIVE VIDEO AREA
           GestureDetector(
-            onDoubleTap: _onDoubleTapLike,
-            onTap: () {
-              if(!_controlsVisible) {
-                _startHideTimer(); // ট্যাপ করলে কন্ট্রোল আসবে
-              } else {
-                if(kIsWeb) _togglePlayPause(); // ওয়েবে ক্লিক করলে পজ
-              }
-            },
+            // ১. চেপে ধরলে প্রিভিউ দেখাবে
+            onLongPressStart: (_) => _startPreview(),
+            onLongPressEnd: (_) => _stopPreview(),
+
+            // ২. ক্লিক করলে নতুন পেজে প্লে হবে
+            onTap: _openFullScreen,
+
             child: Container(
               width: double.infinity,
               color: Colors.black,
@@ -492,86 +389,31 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with SingleTicker
                   children: [
                     VideoPlayer(_controller!),
 
-                    // 1. Big Animated Heart (Like)
-                    if (_showHeart)
-                      ScaleTransition(
-                        scale: _heartScale,
-                        child: const Icon(Icons.favorite, color: Colors.white, size: 100, shadows: [Shadow(color: Colors.black54, blurRadius: 10)]),
+                    // Preview Indicator / Play Icon
+                    if (!_isPreviewing)
+                      Container(
+                        color: Colors.black12, // সামান্য ডার্ক ওভারলে যখন পজ থাকে
+                        child: const Center(
+                          child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 60),
+                        ),
                       ),
 
-                    // 2. Center Controls (Play/Pause) - Auto Hide
-                    AnimatedOpacity(
-                      opacity: _controlsVisible ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Container(
-                        color: Colors.black26,
-                        child: Center(
-                          child: IconButton(
-                            onPressed: _togglePlayPause,
-                            icon: Icon(
-                              _controller!.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                              size: 60,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
+                    // "Hold to Preview" Hint (Optional)
+                    if (!_isPreviewing)
+                      Positioned(
+                        bottom: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            "Hold to Preview • Tap to Watch",
+                            style: TextStyle(color: Colors.white, fontSize: 12),
                           ),
                         ),
                       ),
-                    ),
-
-                    // 3. Bottom Controls (Mute, Fullscreen, Progress)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Control Buttons Row
-                          AnimatedOpacity(
-                            opacity: _controlsVisible ? 1.0 : 0.0,
-                            duration: const Duration(milliseconds: 300),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  // Sound Button
-                                  GestureDetector(
-                                    onTap: _toggleMute,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
-                                      child: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 18),
-                                    ),
-                                  ),
-                                  // Fullscreen Button
-                                  GestureDetector(
-                                    onTap: _openFullScreen,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
-                                      child: const Icon(Icons.fullscreen, color: Colors.white, size: 20),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // 4. Video Progress Bar (Thin Line)
-                          VideoProgressIndicator(
-                            _controller!,
-                            allowScrubbing: true,
-                            colors: const VideoProgressColors(
-                              playedColor: Colors.redAccent,
-                              bufferedColor: Colors.white24,
-                              backgroundColor: Colors.transparent,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               )
@@ -626,8 +468,6 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with SingleTicker
     return Expanded(
       child: InkWell(
         onTap: () {},
-        borderRadius: BorderRadius.circular(5),
-        hoverColor: Colors.grey[200],
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(

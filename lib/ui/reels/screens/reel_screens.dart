@@ -7,8 +7,9 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-// ✅ আপনার ফোল্ডার স্ট্রাকচার অনুযায়ী ইম্পোর্ট পাথ চেক করে নিবেন
+// ✅ আপনার ফোল্ডার স্ট্রাকচার অনুযায়ী ইম্পোর্ট পাথ চেক করে নিবেন
 import '../../../adsterra/adsterra_configs.dart';
 import '../ads/AdWebViewScreen.dart';
 
@@ -77,6 +78,7 @@ class VideoDataHelper {
   static List<VideoDataModel> generateVideos(int count) {
     var random = Random();
     return List.generate(count, (index) {
+      // ID Logic: 64000 থেকে শুরু
       int id = 64000 + index;
       return VideoDataModel(
         url: 'https://ser3.masahub.cc/myfiless/id/$id.mp4',
@@ -122,9 +124,41 @@ class _ReelScreensState extends State<ReelScreens> {
   }
 
   void _loadData() async {
+    // ডাটা জেনারেট হচ্ছে
     await Future.delayed(const Duration(milliseconds: 800));
-    var list = VideoDataHelper.generateVideos(kIsWeb ? 30 : 50);
-    list.shuffle();
+    var list = VideoDataHelper.generateVideos(kIsWeb ? 50 : 50);
+
+    // 🔥🔥 MAIN LOGIC: URL Parameter Check & Reorder 🔥🔥
+    if (kIsWeb) {
+      try {
+        // ১. ব্রাউজার URL থেকে 'post_id' খোঁজা
+        String? targetPostId = Uri.base.queryParameters['post_id'];
+
+        if (targetPostId != null && targetPostId.isNotEmpty) {
+          debugPrint("Found Post ID in URL: $targetPostId");
+
+          // ২. লিস্টের মধ্যে ওই ভিডিওটি খোঁজা (URL এর মধ্যে ID থাকে)
+          int targetIndex = list.indexWhere((video) => video.url.contains(targetPostId));
+
+          if (targetIndex != -1) {
+            // ৩. ভিডিওটি পেলে সেটিকে লিস্ট থেকে বের করে একদম শুরুতে বসানো
+            var targetVideo = list.removeAt(targetIndex);
+            list.insert(0, targetVideo);
+            debugPrint("Video Moved to Top: $targetPostId");
+          }
+        } else {
+          // কোনো ID না থাকলে শাফেল (Random) হবে
+          list.shuffle();
+        }
+      } catch (e) {
+        debugPrint("Error processing URL parameters: $e");
+        list.shuffle();
+      }
+    } else {
+      // মোবাইল অ্যাপ হলে শাফেল
+      list.shuffle();
+    }
+
     if (mounted) {
       setState(() {
         _allVideos = list;
@@ -158,6 +192,7 @@ class _ReelScreensState extends State<ReelScreens> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: FacebookVideoCard(
+                    // Key ব্যবহার করা জরুরি যাতে লিস্ট রিঅর্ডার হলে UI আপডেট হয়
                     key: ValueKey(_allVideos[index].url),
                     videoData: _allVideos[index],
                     allVideosList: _allVideos.map((e) => e.url).toList(),
@@ -253,6 +288,10 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
   bool _isPreviewing = false;
   bool _isNavigating = false;
 
+  // Reaction State
+  bool _isLiked = false;
+  String _selectedReaction = "Like";
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   late AnimationController _heartAnimationController;
@@ -283,6 +322,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
   }
 
   void _initializeVideo() {
+    // Web এ http সমস্যা করে, তাই https
     String url = widget.videoData.url.replaceFirst("http://", "https://");
     _controller = VideoPlayerController.networkUrl(Uri.parse(url))
       ..initialize().then((_) {
@@ -323,15 +363,13 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
     }
   }
 
-  // ✅ CLICK LOGIC: GO TO ADS (Updated with Adsterra Config)
+  // ✅ CLICK LOGIC: GO TO ADS
   void _openFullScreen() {
     _stopPreview();
     if(mounted) setState(() => _isNavigating = true);
 
     Get.to(() => AdWebViewScreen(
-      // 🔥🔥🔥 আপনার Adsterra লিংক এখানে বসানো হলো 🔥🔥🔥
       adLink: AdsterraConfigs.monetagHomeLink,
-
       targetVideoUrl: widget.videoData.url,
       allVideos: widget.allVideosList,
     ))?.then((_) {
@@ -341,10 +379,125 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
     });
   }
 
+  // ✅ 2. Comment Button Logic: Open Browser
+  void _openCommentLinkInBrowser() async {
+    final Uri url = Uri.parse(AdsterraConfigs.monetagHomeLink);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint("Could not launch $url");
+    }
+  }
+
+  // ✅ 3. Share Button Logic: Share Specific URL for Web
+  void _sharePostUrl() {
+    String shareUrl = widget.videoData.url;
+
+    if (kIsWeb) {
+      try {
+        // ১. ভিডিও আইডি বের করা (URL থেকে)
+        // ফরম্যাট: .../id/64005.mp4 -> 64005
+        String videoId = widget.videoData.url.split('/id/').last.split('.').first;
+
+        // ২. ব্রাউজারের বর্তমান অরিজিন (যেমন: https://myapp.com)
+        String appDomain = Uri.base.origin;
+        // যদি লোকালহোস্টে পোর্ট থাকে সেটাও চলে আসবে
+
+        // ৩. ফাইনাল লিংক: https://myapp.com/?post_id=64005
+        shareUrl = "$appDomain/?post_id=$videoId";
+
+      } catch (e) {
+        debugPrint("Error generating share link: $e");
+        shareUrl = Uri.base.toString(); // Fallback
+      }
+    }
+
+    Share.share("Check out this video: $shareUrl");
+  }
+
   void _onDoubleTapLike() {
-    setState(() => _showHeart = true);
+    setState(() {
+      _showHeart = true;
+      _isLiked = true;
+      _selectedReaction = "Love";
+    });
     _heartAnimationController.forward();
     HapticFeedback.mediumImpact();
+  }
+
+  // --- REACTION UI HELPERS ---
+
+  Widget _getReactionButtonIcon() {
+    if (!_isLiked) return Icon(Icons.thumb_up_alt_outlined, color: Colors.grey[700], size: 20);
+
+    switch (_selectedReaction) {
+      case 'Love': return const Text('❤️', style: TextStyle(fontSize: 20));
+      case 'Haha': return const Text('😆', style: TextStyle(fontSize: 20));
+      case 'Wow':  return const Text('😮', style: TextStyle(fontSize: 20));
+      case 'Sad':  return const Text('😢', style: TextStyle(fontSize: 20));
+      case 'Angry':return const Text('😡', style: TextStyle(fontSize: 20));
+      default: return const Icon(Icons.thumb_up, color: Color(0xFF1877F2), size: 20);
+    }
+  }
+
+  Color _getReactionTextColor() {
+    if (!_isLiked) return Colors.grey[700]!;
+    switch (_selectedReaction) {
+      case 'Love': return const Color(0xFFE0245E);
+      case 'Haha':
+      case 'Wow':
+      case 'Sad': return const Color(0xFFF7B125);
+      case 'Angry': return const Color(0xFFE4405F);
+      default: return const Color(0xFF1877F2);
+    }
+  }
+
+  void _showReactionMenu() {
+    HapticFeedback.mediumImpact();
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        alignment: Alignment.center,
+        child: Container(
+          height: 65,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(50),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildAnimatedReactionItem("Like", const Icon(Icons.thumb_up, color: Color(0xFF1877F2), size: 30)),
+              _buildAnimatedReactionItem("Love", const Text('❤️', style: TextStyle(fontSize: 30))),
+              _buildAnimatedReactionItem("Haha", const Text('😆', style: TextStyle(fontSize: 30))),
+              _buildAnimatedReactionItem("Wow", const Text('😮', style: TextStyle(fontSize: 30))),
+              _buildAnimatedReactionItem("Sad", const Text('😢', style: TextStyle(fontSize: 30))),
+              _buildAnimatedReactionItem("Angry", const Text('😡', style: TextStyle(fontSize: 30))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedReactionItem(String name, Widget icon) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isLiked = true;
+          _selectedReaction = name;
+        });
+        Get.back();
+        HapticFeedback.lightImpact();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: icon,
+      ),
+    );
   }
 
   @override
@@ -392,11 +545,11 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
 
           const SizedBox(height: 5),
 
-          // ✅ Video Area
+          // ✅ INTERACTIVE VIDEO AREA
           GestureDetector(
             onLongPressStart: (_) => _startPreview(),
             onLongPressEnd: (_) => _stopPreview(),
-            onTap: _openFullScreen, // 👉 Tap to Ad
+            onTap: _openFullScreen,
             onDoubleTap: _onDoubleTapLike,
 
             child: Container(
@@ -410,7 +563,6 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                   children: [
                     VideoPlayer(_controller!),
 
-                    // Gradient
                     Positioned(
                       bottom: 0, left: 0, right: 0,
                       child: Container(
@@ -475,61 +627,110 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
             ),
           ),
 
-          _buildActionFooter(),
+          // Stats Text
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(children: [
+                  _getReactionButtonIcon(),
+                  const SizedBox(width: 4),
+                  Text(
+                      !_isLiked ? "1.2K" : "You and 1.2K others",
+                      style: const TextStyle(color: Colors.grey, fontSize: 13)
+                  ),
+                ]),
+                const Text("25 Comments  •  10 Shares", style: TextStyle(fontSize: 13, color: Colors.grey)),
+              ],
+            ),
+          ),
+          const Divider(height: 0, thickness: 0.5),
+
+          // ✅ FOOTER ACTIONS
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+
+                // 1. Like/Reaction
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (_isLiked) {
+                          _isLiked = false;
+                          _selectedReaction = "Like";
+                        } else {
+                          _isLiked = true;
+                          _selectedReaction = "Like";
+                        }
+                      });
+                      HapticFeedback.lightImpact();
+                    },
+                    onLongPress: _showReactionMenu, // Long press for menu
+                    child: Container(
+                      color: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _getReactionButtonIcon(),
+                          const SizedBox(width: 6),
+                          Text(
+                              _selectedReaction,
+                              style: TextStyle(
+                                  color: _getReactionTextColor(),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14
+                              )
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 2. Comment
+                Expanded(
+                  child: InkWell(
+                    onTap: _openCommentLinkInBrowser,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.mode_comment_outlined, color: Colors.grey[700], size: 22),
+                          const SizedBox(width: 6),
+                          Text("Comment", style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 3. Share
+                Expanded(
+                  child: InkWell(
+                    onTap: _sharePostUrl,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.share_outlined, color: Colors.grey[700], size: 22),
+                          const SizedBox(width: 6),
+                          Text("Share", style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionFooter() {
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(children: [
-                Icon(Icons.thumb_up, size: 16, color: Color(0xFF1877F2)),
-                SizedBox(width: 4),
-                Text("1.2K", style: TextStyle(color: Colors.grey, fontSize: 13)),
-              ]),
-              Text("25 Comments  •  10 Shares", style: TextStyle(fontSize: 13, color: Colors.grey)),
-            ],
-          ),
-        ),
-        const Divider(height: 0, thickness: 0.5),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _actionBtn(Icons.thumb_up_outlined, "Like"),
-              _actionBtn(Icons.mode_comment_outlined, "Comment"),
-              _actionBtn(Icons.share_outlined, "Share"),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _actionBtn(IconData icon, String label) {
-    return Expanded(
-      child: InkWell(
-        onTap: () { HapticFeedback.lightImpact(); },
-        borderRadius: BorderRadius.circular(5),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.grey[700], size: 22),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 14)),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -8,9 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../../adsterra/adsterra_configs.dart';
 import '../ads/AdWebViewScreen.dart';
-import '../profile_screens/screens/view_profile_screens.dart';
+
+// import 'profile_screens/screens/view_profile_screens.dart'; // লাগলে আনকমেন্ট করুন
 
 // ==========================================
 // 1. DATA MODEL
@@ -152,7 +152,6 @@ class _ReelScreensState extends State<ReelScreens> {
             child: _isLoading
                 ? _buildShimmerLoading()
                 : ListView.builder(
-              // physics: const AlwaysScrollableScrollPhysics(), // স্মুথ স্ক্রলিং
               cacheExtent: kIsWeb ? 800 : 1500,
               itemCount: _allVideos.length,
               itemBuilder: (context, index) {
@@ -232,7 +231,7 @@ class _ReelScreensState extends State<ReelScreens> {
 }
 
 // ==========================================
-// 4. FACEBOOK VIDEO CARD (SMART PREVIEW & CLICK TO PLAY)
+// 4. FACEBOOK VIDEO CARD
 // ==========================================
 class FacebookVideoCard extends StatefulWidget {
   final VideoDataModel videoData;
@@ -252,13 +251,10 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _isPreviewing = false;
-  bool _isNavigating = false; // To prevent double navigation
+  bool _isNavigating = false;
 
-  // Animations
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-
-  // Heart Animation
   late AnimationController _heartAnimationController;
   late Animation<double> _heartScale;
   bool _showHeart = false;
@@ -268,11 +264,9 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
     super.initState();
     _initializeVideo();
 
-    // Play Button Pulse
     _pulseController = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat(reverse: true);
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
 
-    // Heart Animation
     _heartAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
     _heartScale = Tween<double>(begin: 0.0, end: 1.2).animate(
         CurvedAnimation(parent: _heartAnimationController, curve: Curves.elasticOut)
@@ -289,34 +283,32 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
   }
 
   void _initializeVideo() {
+    // Web এর জন্য https করে নেয়া নিরাপদ
     String url = widget.videoData.url.replaceFirst("http://", "https://");
     _controller = VideoPlayerController.networkUrl(Uri.parse(url))
       ..initialize().then((_) {
         if (mounted) {
           setState(() => _isInitialized = true);
-          _controller?.setVolume(0); // Preview মিউট থাকবে (অপশনাল)
-          _controller?.addListener(_checkPreviewDuration);
+          _controller?.setVolume(0);
+          _controller?.addListener(_previewTimeListener);
         }
       }).catchError((e) {
         debugPrint("Video Error: $e");
       });
   }
 
-  // ✅ 3. Auto Redirect Logic (7 Seconds)
-  void _checkPreviewDuration() {
+  void _previewTimeListener() {
     if (_controller == null || !_controller!.value.isInitialized || _isNavigating) return;
 
     if (_controller!.value.isPlaying && _isPreviewing) {
-      // যদি ৭ সেকেন্ডের বেশি হয়
       if (_controller!.value.position.inSeconds >= 7) {
         _isNavigating = true;
-        _stopPreview(); // পজ করা
-        _openFullScreen(); // ফুল স্ক্রিনে পাঠানো
+        _stopPreview();
+        _openFullScreen();
       }
     }
   }
 
-  // ✅ 2. Hold to Preview Logic
   void _startPreview() {
     if (_controller != null && _isInitialized) {
       HapticFeedback.selectionClick();
@@ -332,19 +324,18 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
     }
   }
 
-  // ✅ 1. Tap to Play Logic
+  // ✅ CLICK LOGIC: GO TO ADS
   void _openFullScreen() {
-    _stopPreview(); // নিশ্চিত করা যে প্রিভিউ বন্ধ আছে
+    _stopPreview();
     if(mounted) setState(() => _isNavigating = true);
 
     Get.to(() => AdWebViewScreen(
-      adLink: AdsterraConfigs.monetagHomeLink,
+      adLink: "https://www.google.com", // আপনার অ্যাড লিঙ্ক এখানে দিন
       targetVideoUrl: widget.videoData.url,
       allVideos: widget.allVideosList,
     ))?.then((_) {
       if(mounted) {
         setState(() => _isNavigating = false);
-        // ফিরে আসলে ভিডিও প্রথম থেকে শুরু হবে না, পজ থাকবে
       }
     });
   }
@@ -357,7 +348,7 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
 
   @override
   void dispose() {
-    _controller?.removeListener(_checkPreviewDuration);
+    _controller?.removeListener(_previewTimeListener);
     _controller?.dispose();
     _pulseController.dispose();
     _heartAnimationController.dispose();
@@ -378,20 +369,17 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with Hero
+          // Header
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             leading: InkWell(
-              onTap: () => Get.to(() => ProfileViewScreen(userData: video)),
+              onTap: () {}, // প্রোফাইল স্ক্রিন লজিক থাকলে এখানে দিন
               child: Hero(
                 tag: video.url + video.channelName,
                 child: CircleAvatar(backgroundImage: NetworkImage(video.profileImage)),
               ),
             ),
-            title: InkWell(
-              onTap: () => Get.to(() => ProfileViewScreen(userData: video)),
-              child: Text(video.channelName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
+            title: Text(video.channelName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             subtitle: Text("${video.timeAgo} · 🌎", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             trailing: const Icon(Icons.more_horiz),
           ),
@@ -405,9 +393,9 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
 
           // ✅ INTERACTIVE VIDEO AREA
           GestureDetector(
-            onLongPressStart: (_) => _startPreview(), // 2. Hold to Preview
+            onLongPressStart: (_) => _startPreview(),
             onLongPressEnd: (_) => _stopPreview(),
-            onTap: _openFullScreen, // 1. Click to Play (Full Screen)
+            onTap: _openFullScreen, // 👉 Tap করলে Ads এ যাবে
             onDoubleTap: _onDoubleTapLike,
 
             child: Container(
@@ -421,7 +409,6 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                   children: [
                     VideoPlayer(_controller!),
 
-                    // Cinema Gradient
                     Positioned(
                       bottom: 0, left: 0, right: 0,
                       child: Container(
@@ -436,7 +423,6 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                       ),
                     ),
 
-                    // Play Button Visual (Pulsing) - Only show when NOT previewing
                     if (!_isPreviewing)
                       ScaleTransition(
                         scale: _pulseAnimation,
@@ -451,17 +437,12 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                         ),
                       ),
 
-                    // Preview Indicator (When Holding)
                     if (_isPreviewing)
                       Positioned(
-                        top: 10,
-                        right: 10,
+                        top: 10, right: 10,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.9), borderRadius: BorderRadius.circular(20)),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -473,19 +454,17 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                         ),
                       ),
 
-                    // Heart Animation
                     if (_showHeart)
                       ScaleTransition(
                         scale: _heartScale,
                         child: const Icon(Icons.favorite, color: Colors.white, size: 100, shadows: [Shadow(color: Colors.black54, blurRadius: 20)]),
                       ),
 
-                    // Progress Bar (Always visible)
                     Positioned(
                       bottom: 0, left: 0, right: 0,
                       child: VideoProgressIndicator(
                         _controller!,
-                        allowScrubbing: false, // Preview তে স্ক্রাব করা যাবে না
+                        allowScrubbing: false,
                         colors: const VideoProgressColors(
                           playedColor: Color(0xFF1877F2),
                           bufferedColor: Colors.white24,
@@ -497,14 +476,10 @@ class _FacebookVideoCardState extends State<FacebookVideoCard> with TickerProvid
                   ],
                 ),
               )
-                  : const SizedBox(
-                  height: 350,
-                  child: Center(child: CircularProgressIndicator(color: Colors.white))
-              ),
+                  : const SizedBox(height: 350, child: Center(child: CircularProgressIndicator(color: Colors.white))),
             ),
           ),
 
-          // Footer Actions
           _buildActionFooter(),
         ],
       ),

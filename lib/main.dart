@@ -107,8 +107,7 @@ class _MyAppState extends State<MyApp> {
         // ফন্ট ফ্যামিলি বা অন্যান্য থিম সেটিংস এখানে দিতে পারেন
       ),
 
-      // প্রথমে স্প্ল্যাশ স্ক্রিন বা রিলস স্ক্রিন দেখাবে
-      home: Basescreens(),
+      home: ReelScreens(),
     );
   }
 }

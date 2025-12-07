@@ -10,7 +10,6 @@ class Urls {
   static String get addCommentApi => "$_rootUrl/add_comment.php";
   static String get getUserProfileApi => "$_rootUrl/get_user_profile.php";
 
-  // ✅ এই দুটি লাইন যোগ করুন
   static String get createPostApi => "$_rootUrl/create_post.php";
   static String get uploadImageApi => "$_rootUrl/upload_image.php";
 

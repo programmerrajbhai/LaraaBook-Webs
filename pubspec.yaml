@@ -32,6 +32,7 @@ dependencies:
   video_thumbnail: ^0.5.3
   faker: ^2.1.0
   flutter_stripe: ^10.1.0
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

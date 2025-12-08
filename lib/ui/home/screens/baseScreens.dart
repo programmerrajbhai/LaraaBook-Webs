@@ -51,7 +51,7 @@ class _BasescreensState extends State<Basescreens> {
         // Adjust spacing based on layout
         titleSpacing: isWebDesktop ? 30 : 20,
         title: Text(
-          "MEETYARAH",
+          "Smart Dimla",
           style: GoogleFonts.bebasNeue(
             fontSize: 34,
             fontWeight: FontWeight.w500,

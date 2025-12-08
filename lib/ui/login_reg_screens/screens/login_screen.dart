@@ -1,300 +1,298 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart'; // ফন্ট স্টাইলের জন্য
 import 'package:meetyarah/assetsPath/image_url.dart';
 import 'package:meetyarah/assetsPath/textColors.dart';
 import 'package:meetyarah/ui/login_reg_screens/controllers/loginController.dart';
 import 'package:meetyarah/ui/login_reg_screens/screens/forget_screen.dart';
 import 'package:meetyarah/ui/login_reg_screens/screens/reg_screen.dart';
-import '../widgets/containnerBox.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final loginController = Get.put(LoginController());
-
-  @override
   Widget build(BuildContext context) {
+    final loginController = Get.put(LoginController());
     final size = MediaQuery.of(context).size;
-
-    // রেসপন্সিভ ব্রেকপয়েন্ট (৮০০ পিক্সেলের বেশি হলে ওয়েব ভিউ)
-    bool isWebLayout = size.width > 800;
+    bool isWebDesktop = size.width > 900;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // একদম সাদা না দিয়ে হালকা গ্রে প্রফেশনাল লাগে
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: isWebLayout
-            ? _buildWebLayout(size) // ডেস্কটপ ভিউ
-            : _buildMobileLayout(size), // মোবাইল ভিউ
-      ),
-    );
-  }
-
-  // --- WEB Layout (Split Screen) ---
-  Widget _buildWebLayout(Size size) {
-    return Row(
-      children: [
-        // Left Side: Banner / Branding
-        Expanded(
-          flex: 6, // ৬০% জায়গা নিবে
-          child: Container(
-            color: ColorPath.deepBlue.withOpacity(0.05),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  ImagePath.appLogotransparent,
-                  height: 150,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  "Connect with friends and the \nworld around you on Meetyarah.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: ColorPath.deepBlue,
+      backgroundColor: Colors.white,
+      body: Row(
+        children: [
+          // --- LEFT SIDE: HERO IMAGE (Only for Desktop/Web) ---
+          if (isWebDesktop)
+            Expanded(
+              flex: 6, // 60% জায়গা নিবে
+              child: Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    // একটি সুন্দর কাপল বা সোশ্যাল ভাইব ইমেজ
+                    image: NetworkImage("https://images.unsplash.com/photo-1516054575922-f0b8eeadec1a?q=80&w=2070&auto=format&fit=crop"),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 40),
-                // ইলাস্ট্রেশন বা বড় ইমেজ এখানে দিতে পারো
-                Image.asset(
-                  "assets/images/chat.png", // তোমার অ্যাসেট ফোল্ডারের ইমেজ
-                  height: 300,
+                child: Container(
+                  // ইমেজের ওপর গ্রেডিয়েন্ট ওভারলে (টেক্সট সুন্দর দেখানোর জন্য)
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        ColorPath.deepBlue.withOpacity(0.9),
+                        Colors.black.withOpacity(0.3),
+                      ],
+                      begin: Alignment.bottomLeft,
+                      end: Alignment.topRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(60),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Discover\nReal Connections.",
+                        style: GoogleFonts.poppins(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "Join millions of people finding their perfect match and building meaningful relationships every day.",
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          color: Colors.white70,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-        ),
-
-        // Right Side: Login Form
-        Expanded(
-          flex: 4, // ৪০% জায়গা নিবে
-          child: Center(
-            child: Container(
-              width: 450,
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  )
-                ],
               ),
-              child: _buildLoginForm(isWeb: true),
+            ),
+
+          // --- RIGHT SIDE: LOGIN FORM ---
+          Expanded(
+            flex: isWebDesktop ? 4 : 1, // মোবাইলে ১০০%, ডেস্কটপে ৪০%
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Mobile Logo (Only visible on small screens)
+                    if (!isWebDesktop) ...[
+                      Image.asset(
+                        ImagePath.appLogotransparent,
+                        height: 80,
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+
+                    // Header Text
+                    Text(
+                      "Welcome Back! 👋",
+                      style: GoogleFonts.poppins(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                      textAlign: isWebDesktop ? TextAlign.start : TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Please enter your details to sign in.",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      textAlign: isWebDesktop ? TextAlign.start : TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
+
+                    // EMAIL FIELD
+                    _buildLabel("Email or Phone"),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: loginController.emailOrPhoneCtrl,
+                      hint: "Enter your email",
+                      icon: Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // PASSWORD FIELD
+                    _buildLabel("Password"),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: loginController.passwordCtrl,
+                      hint: "Enter your password",
+                      icon: Icons.lock_outline,
+                      isPassword: true,
+                      onSubmitted: (_) => loginController.LoginUser(),
+                    ),
+
+                    // FORGOT PASSWORD
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Get.to(() => const ForgotScreens()),
+                        child: Text(
+                          "Forgot Password?",
+                          style: GoogleFonts.inter(
+                            color: ColorPath.deepBlue,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // LOGIN BUTTON
+                    Obx(() => SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: loginController.isLoading.value
+                            ? null
+                            : () => loginController.LoginUser(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ColorPath.deepBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: loginController.isLoading.value
+                            ? const SizedBox(
+                          height: 20, width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                            : Text(
+                          "Log In",
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )),
+
+                    const SizedBox(height: 20),
+
+                    // DIVIDER
+                    Row(children: [
+                      Expanded(child: Divider(color: Colors.grey[300])),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text("OR", style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey[300])),
+                    ]),
+                    const SizedBox(height: 20),
+
+                    // --- GUEST BUTTON ---
+                    Obx(() => SizedBox(
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: loginController.isGuestLoading.value
+                            ? null
+                            : () => loginController.loginAsGuest(),
+                        icon: const Icon(Icons.travel_explore, size: 20),
+                        label: Text(
+                          loginController.isGuestLoading.value ? "Processing..." : "Continue as Guest",
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black87,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    )),
+
+                    const SizedBox(height: 40),
+
+                    // SIGN UP LINK
+                    Center(
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Don't have an account? ",
+                          style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 14),
+                          children: [
+                            TextSpan(
+                              text: 'Sign Up',
+                              style: GoogleFonts.inter(
+                                color: ColorPath.deepBlue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => Get.to(() => const RegistrationScreens()),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // --- MOBILE Layout ---
-  Widget _buildMobileLayout(Size size) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              ImagePath.appLogotransparent,
-              width: 150,
-              height: 100,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 40),
-            _buildLoginForm(isWeb: false),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  // --- Shared Form Component ---
-  Widget _buildLoginForm({required bool isWeb}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if(isWeb) ...[
-          const Text(
-            "Welcome Back",
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "Login to continue managing your account.",
-            style: TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-          const SizedBox(height: 30),
-        ],
-
-        // Custom Text Field (Email)
-        _customTextField(
-          controller: loginController.emailOrPhoneCtrl,
-          label: "Email or Phone",
-          icon: Icons.email_outlined,
-        ),
-        const SizedBox(height: 16),
-
-        // Custom Text Field (Password)
-        _customTextField(
-          controller: loginController.passwordCtrl,
-          label: "Password",
-          icon: Icons.lock_outline,
-          isPassword: true,
-          onSubmit: (_) => loginController.LoginUser(),
-        ),
-
-        // Forgot Password
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () => Get.to(() => const ForgotScreens()),
-            child: const Text(
-              "Forgot Password?",
-              style: TextStyle(color: ColorPath.deepBlue, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Login Button
-        Obx(() => loginController.isLoading.value
-            ? const Center(child: CircularProgressIndicator(color: ColorPath.deepBlue))
-            : ElevatedButton(
-          onPressed: () => loginController.LoginUser(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: ColorPath.deepBlue,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 2,
-          ),
-          child: const Text("LOG IN", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        )),
-
-        const SizedBox(height: 16),
-
-        // --- GUEST LOGIN BUTTON ---
-        Obx(() => loginController.isGuestLoading.value
-            ? const Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)))
-            : OutlinedButton.icon(
-          onPressed: () => loginController.loginAsGuest(),
-          icon: const Icon(Icons.person_outline, size: 20),
-          label: const Text("Continue as Guest"),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            side: const BorderSide(color: Colors.grey),
-            foregroundColor: Colors.black87,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // OR Divider
-        Row(children: [
-          Expanded(child: Divider(color: Colors.grey[300])),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text("OR", style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-          ),
-          Expanded(child: Divider(color: Colors.grey[300])),
-        ]),
-        const SizedBox(height: 24),
-
-        // Google Sign In (Custom Widget)
-        InkWell(
-          onTap: (){}, // Google Login Logic
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(ImagePath.gogoleIcon, height: 24),
-                const SizedBox(width: 10),
-                const Text("Sign in with Google", style: TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 30),
-
-        // Sign Up Link
-        Center(
-          child: RichText(
-            text: TextSpan(
-              text: "Don't have an account? ",
-              style: const TextStyle(color: Colors.black54, fontSize: 15),
-              children: [
-                TextSpan(
-                  text: 'Sign Up',
-                  style: const TextStyle(
-                    color: ColorPath.deepBlue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = () => Get.to(() => const RegistrationScreens()),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+  // Helper Widget for Labels
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Colors.black87,
+      ),
     );
   }
 
-  // --- Professional Custom TextField Widget ---
-  Widget _customTextField({
+  // Helper Widget for TextFields
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String hint,
     required IconData icon,
     bool isPassword = false,
-    Function(String)? onSubmit,
+    Function(String)? onSubmitted,
   }) {
-    return TextFormField(
+    return TextField(
       controller: controller,
       obscureText: isPassword,
-      onFieldSubmitted: onSubmit,
+      onSubmitted: onSubmitted,
       decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey[600], size: 22),
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 14),
+        prefixIcon: Icon(icon, color: Colors.grey[500], size: 20),
         filled: true,
-        fillColor: Colors.grey[100],
+        fillColor: Colors.grey[50], // খুব হালকা গ্রে ব্যাকগ্রাউন্ড
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: ColorPath.deepBlue, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       ),
     );
   }

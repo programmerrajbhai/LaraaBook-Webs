@@ -6,6 +6,7 @@ class Urls {
   static String registerApi = "$_rootUrl/register.php";
   static String get_all_posts = "$_rootUrl/get_all_posts.php";
 
+  static String googleLoginApi = "$_rootUrl/google_login.php";
   static String get getCommentsApi => "$_rootUrl/get_comments.php";
   static String get addCommentApi => "$_rootUrl/add_comment.php";
   static String get getUserProfileApi => "$_rootUrl/get_user_profile.php";

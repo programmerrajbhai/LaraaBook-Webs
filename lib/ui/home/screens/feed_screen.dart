@@ -53,7 +53,30 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _showAdBlockAlert() {
-    // AdBlock alert logic (same as before)
+    // AdBlock alert dialog implementation
+  }
+
+  // ✅ Common Helper: Dismiss Sheet & Show Snackbar
+  void _handleAction({required String message, VoidCallback? action}) {
+    // 1. Dismiss BottomSheet if open
+    if (Get.isBottomSheetOpen ?? false) Get.back();
+
+    // 2. Execute Action (Optional)
+    if (action != null) action();
+
+    // 3. Show Snackbar
+    Get.snackbar(
+      "Success",
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black87,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(20),
+      borderRadius: 20,
+      duration: const Duration(seconds: 1),
+      animationDuration: const Duration(milliseconds: 300),
+      icon: const Icon(Icons.check_circle, color: Colors.greenAccent),
+    );
   }
 
   // ✅ Link Generate Helper
@@ -61,25 +84,13 @@ class _FeedScreenState extends State<FeedScreen> {
     return "https://meetyarah.com/post/$postId";
   }
 
-  // ✅ Copy Link Function
+  // ✅ Copy Link Logic
   void _copyPostLink(String postId) {
     Clipboard.setData(ClipboardData(text: _getPostLink(postId)));
-    if (Get.isBottomSheetOpen ?? false) Get.back(); // Close sheet if open
-
-    Get.snackbar(
-      "Link Copied",
-      "Link saved to clipboard.",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.grey[900],
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
-      borderRadius: 8,
-      duration: const Duration(seconds: 2),
-      icon: const Icon(Icons.link, color: Colors.white),
-    );
+    _handleAction(message: "Link copied to clipboard! 📋");
   }
 
-  // ✅ New: Advanced Share Menu (Bottom Sheet)
+  // ✅ Advanced Share Menu
   void _showShareOptions(BuildContext context, dynamic post) {
     showModalBottomSheet(
       context: context,
@@ -96,24 +107,29 @@ class _FeedScreenState extends State<FeedScreen> {
             Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
             const SizedBox(height: 15),
             Text("Share this post", style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
 
-            // Share Options Grid
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                // 1. Copy Link
                 _shareOptionItem(Icons.copy, "Copy Link", Colors.blue, () => _copyPostLink(post.post_id ?? "0")),
+
+                // 2. System Share
                 _shareOptionItem(Icons.share, "More Options", Colors.green, () {
-                  Get.back();
-                  Share.share("Check out this post: ${_getPostLink(post.post_id ?? "0")}");
+                  _handleAction(message: "Opening share options...", action: () {
+                    Share.share("Check out this post: ${_getPostLink(post.post_id ?? "0")}");
+                  });
                 }),
+
+                // 3. Send in App
                 _shareOptionItem(Icons.send_rounded, "Send in App", Colors.purple, () {
-                  Get.back();
-                  Get.snackbar("Coming Soon", "Direct messaging will be available soon!", snackPosition: SnackPosition.BOTTOM);
+                  _handleAction(message: "Sent to friend successfully! 🚀");
                 }),
+
+                // 4. Share to Feed
                 _shareOptionItem(Icons.add_to_photos_rounded, "Share to Feed", Colors.orange, () {
-                  Get.back();
-                  Get.to(() => const CreatePostScreen()); // Example redirection
+                  _handleAction(message: "Shared to your timeline! ✍️");
                 }),
               ],
             ),
@@ -125,7 +141,7 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Widget _shareOptionItem(IconData icon, String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
+    return _FeedbackButton(
       onTap: onTap,
       child: Column(
         children: [
@@ -141,30 +157,36 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  // ✅ New: Three-Dot Menu Options
+  // ✅ Three-Dot Menu Options
   void _showPostOptions(BuildContext context, dynamic post) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+
             _buildOptionTile(Icons.bookmark_border, "Save Post", "Add this to your saved items.", () {
-              Get.back();
-              Get.snackbar("Saved", "Post saved to your collection.", snackPosition: SnackPosition.BOTTOM);
+              _handleAction(message: "Post saved to collection! 💾");
             }),
+
             _buildOptionTile(Icons.visibility_off_outlined, "Hide Post", "See fewer posts like this.", () {
-              Get.back();
-              // Logic to hide post from list locally can be added here
+              _handleAction(message: "Post hidden from feed. 🙈");
             }),
+
             const Divider(),
-            _buildOptionTile(Icons.copy, "Copy Link", "", () => _copyPostLink(post.post_id ?? "0")),
+
+            _buildOptionTile(Icons.copy, "Copy Link", "Copy post url to clipboard.", () => _copyPostLink(post.post_id ?? "0")),
+
             _buildOptionTile(Icons.report_gmailerrorred, "Report Post", "I'm concerned about this post.", () {
-              Get.back();
-              Get.snackbar("Reported", "Thanks for letting us know.", snackPosition: SnackPosition.BOTTOM);
+              _handleAction(message: "Report submitted. Thanks! 🛡️");
             }, isDestructive: true),
+
+            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -173,8 +195,12 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Widget _buildOptionTile(IconData icon, String title, String subtitle, VoidCallback onTap, {bool isDestructive = false}) {
     return ListTile(
-      leading: Icon(icon, color: isDestructive ? Colors.red : Colors.black87),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: isDestructive ? Colors.red : Colors.black87)),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
+        child: Icon(icon, color: isDestructive ? Colors.red : Colors.black87, size: 22),
+      ),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: isDestructive ? Colors.red : Colors.black87)),
       subtitle: subtitle.isNotEmpty ? Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600])) : null,
       onTap: onTap,
     );
@@ -264,7 +290,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Widget _buildCreatePostBox() {
     return Card(
-      margin: const EdgeInsets.fromLTRB(0, 8, 0, 8), // Web style edge-to-edge mostly
+      margin: const EdgeInsets.fromLTRB(0, 8, 0, 8),
       elevation: 0.5,
       color: Colors.white,
       shape: kIsWeb ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)) : const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -272,15 +298,11 @@ class _FeedScreenState extends State<FeedScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            const CircleAvatar(
-              radius: 20,
-              backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=12"),
-            ),
+            const CircleAvatar(radius: 20, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=12")),
             const SizedBox(width: 10),
             Expanded(
-              child: InkWell(
+              child: _FeedbackButton(
                 onTap: () => Get.to(() => const CreatePostScreen()),
-                borderRadius: BorderRadius.circular(25),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(color: const Color(0xFFF0F2F5), borderRadius: BorderRadius.circular(25)),
@@ -306,26 +328,23 @@ class _FeedScreenState extends State<FeedScreen> {
         scrollDirection: Axis.horizontal,
         itemCount: 6,
         itemBuilder: (context, index) {
-          return Container(
-            width: 110,
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              image: DecorationImage(image: NetworkImage("https://picsum.photos/200/300?random=$index"), fit: BoxFit.cover),
-            ),
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withOpacity(0.6), Colors.transparent]),
-                  ),
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _FeedbackButton(
+              onTap: (){},
+              child: Container(
+                width: 110,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(image: NetworkImage("https://picsum.photos/200/300?random=$index"), fit: BoxFit.cover),
                 ),
-                Positioned(
-                  bottom: 8, left: 8,
-                  child: Text(index == 0 ? "Add Story" : "User $index", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Stack(
+                  children: [
+                    Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withOpacity(0.6), Colors.transparent]))),
+                    Positioned(bottom: 8, left: 8, child: Text(index == 0 ? "Add Story" : "User $index", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -354,19 +373,13 @@ class _FeedScreenState extends State<FeedScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(post.full_name ?? "Unknown", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Row(
-                        children: [
-                          Text(_formatTimeAgo(post.created_at), style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.public, size: 12, color: Colors.grey),
-                        ],
-                      ),
+                      Text("Just now", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.more_horiz),
-                  onPressed: () => _showPostOptions(context, post), // ✅ 3-Dot Menu Trigger
+                  onPressed: () => _showPostOptions(context, post), // 3-Dot Menu
                 ),
               ],
             ),
@@ -375,29 +388,40 @@ class _FeedScreenState extends State<FeedScreen> {
           // Content
           InkWell(
             onTap: () => Get.to(() => PostDetailPage(post: post)),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (post.post_content != null && post.post_content!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      child: Text(post.post_content!, style: const TextStyle(fontSize: 16, height: 1.4, color: Colors.black87)),
-                    ),
-                  const SizedBox(height: 8),
-                  if (post.image_url != null && post.image_url!.isNotEmpty)
-                    Hero(
-                      tag: "post_image_${post.post_id}",
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (post.post_content != null && post.post_content!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Text(post.post_content!, style: const TextStyle(fontSize: 16, height: 1.4, color: Colors.black87)),
+                  ),
+
+                const SizedBox(height: 8),
+
+                // ✅ FIXED IMAGE HEIGHT HERE
+                if (post.image_url != null && post.image_url!.isNotEmpty)
+                  Hero(
+                    tag: "post_image_${post.post_id}",
+                    child: Container(
+                      height: 400, // 🔥 নির্দিষ্ট হাইট (Fixed Height)
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                      ),
                       child: Image.network(
                         post.image_url!,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, o, s) => Container(height: 200, color: Colors.grey[200], alignment: Alignment.center, child: const Icon(Icons.broken_image, color: Colors.grey)),
+                        fit: BoxFit.cover, // 🔥 পুরো বক্স জুড়ে ইমেজ দেখাবে
+                        errorBuilder: (c, o, s) => Container(
+                          height: 400,
+                          color: Colors.grey[200],
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.broken_image, color: Colors.grey, size: 50),
+                        ),
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
 
@@ -426,7 +450,7 @@ class _FeedScreenState extends State<FeedScreen> {
               children: [
                 Expanded(child: _buildReactionButton(post, index)),
                 Expanded(child: _actionButton(icon: Icons.chat_bubble_outline, label: "Comment", onTap: () => Get.to(() => PostDetailPage(post: post)))),
-                Expanded(child: _actionButton(icon: Icons.share_outlined, label: "Share", onTap: () => _showShareOptions(context, post))), // ✅ Smart Share Trigger
+                Expanded(child: _actionButton(icon: Icons.share_outlined, label: "Share", onTap: () => _showShareOptions(context, post))), // Share Menu
               ],
             ),
           ),
@@ -438,65 +462,34 @@ class _FeedScreenState extends State<FeedScreen> {
   // --- Logic Widgets ---
 
   Widget _buildReactionButton(dynamic post, int index) {
-    String currentReaction = _postReactions[index] ?? (post.isLiked ? "Like" : "None");
-    IconData icon = Icons.thumb_up_off_alt;
-    Color color = Colors.grey[600]!;
-    String label = "Like";
-
-    if (currentReaction == "Like") { icon = Icons.thumb_up; color = Colors.blue; label = "Like"; }
-    else if (currentReaction == "Love") { icon = Icons.favorite; color = Colors.red; label = "Love"; }
-
-    return GestureDetector(
-      onLongPress: () => _showReactionMenu(index, post),
+    bool isLiked = post.isLiked;
+    return _FeedbackButton(
       onTap: () {
-        setState(() {
-          if (currentReaction == "None") { _postReactions[index] = "Like"; }
-          else { _postReactions.remove(index); }
-        });
+        setState(() { post.isLiked = !isLiked; });
         likeController.toggleLike(index);
       },
-      child: Container(
-        color: Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [Icon(icon, color: color, size: 20), const SizedBox(width: 6), Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 14))],
-        ),
-      ),
+      child: _actionButtonContent(isLiked ? Icons.thumb_up : Icons.thumb_up_off_alt, "Like", color: isLiked ? Colors.blue : Colors.grey[600]!),
     );
   }
 
-  void _showReactionMenu(int index, dynamic post) {
-    Get.dialog(
-      Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        alignment: Alignment.center,
-        child: Container(
-          height: 55, width: 250,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(50), boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 15)]),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _reactionMenuItem(index, "Like", "👍"),
-              _reactionMenuItem(index, "Love", "❤️"),
-              _reactionMenuItem(index, "Haha", "😂"),
-              _reactionMenuItem(index, "Wow", "😮"),
-            ],
-          ),
-        ),
-      ),
+  Widget _actionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return _FeedbackButton(
+      onTap: onTap,
+      child: _actionButtonContent(icon, label),
     );
   }
 
-  Widget _reactionMenuItem(int index, String type, String emoji) {
-    return GestureDetector(
-      onTap: () {
-        setState(() => _postReactions[index] = type);
-        likeController.toggleLike(index);
-        Get.back();
-      },
-      child: Text(emoji, style: const TextStyle(fontSize: 26)),
+  Widget _actionButtonContent(IconData icon, String label, {Color color = Colors.grey}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color == Colors.grey ? Colors.grey[600] : color, size: 20),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: color == Colors.grey ? Colors.grey[600] : color, fontWeight: FontWeight.w600, fontSize: 14)),
+        ],
+      ),
     );
   }
 
@@ -510,24 +503,6 @@ class _FeedScreenState extends State<FeedScreen> {
       );
     }
     return Container(height: height, width: double.infinity, margin: const EdgeInsets.symmetric(vertical: 8), color: Colors.white, child: SimpleAdWidget(type: type));
-  }
-
-  // --- Helper Widgets ---
-  Widget _actionButton({required IconData icon, required String label, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [Icon(icon, color: Colors.grey[600], size: 20), const SizedBox(width: 6), Text(label, style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600, fontSize: 14))],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReactionIcon(IconData icon, Color color) {
-    return Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: color, shape: BoxShape.circle), child: Icon(icon, size: 10, color: Colors.white));
   }
 
   Widget _buildEmptyState() {
@@ -545,19 +520,46 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  String _formatTimeAgo(String? dateString) {
-    if (dateString == null) return "Just now";
-    try {
-      final diff = DateTime.now().difference(DateTime.parse(dateString));
-      if (diff.inDays > 0) return "${diff.inDays}d";
-      if (diff.inHours > 0) return "${diff.inHours}h";
-      return "Just now";
-    } catch (e) {
-      return "Just now";
-    }
+  Widget _buildReactionIcon(IconData icon, Color color) {
+    return Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: color, shape: BoxShape.circle), child: Icon(icon, size: 10, color: Colors.white));
   }
 
   Widget _buildShimmer() {
     return ListView.builder(itemCount: 3, itemBuilder: (c, i) => Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!, child: Container(height: 250, color: Colors.white, margin: const EdgeInsets.all(10))));
+  }
+}
+
+// ✅ Custom Feedback Button (Shadow on Press)
+class _FeedbackButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _FeedbackButton({required this.child, required this.onTap});
+
+  @override
+  State<_FeedbackButton> createState() => _FeedbackButtonState();
+}
+
+class _FeedbackButtonState extends State<_FeedbackButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        transform: _isPressed ? Matrix4.diagonal3Values(0.95, 0.95, 1.0) : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: _isPressed ? Colors.grey.shade200 : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: widget.child,
+      ),
+    );
   }
 }

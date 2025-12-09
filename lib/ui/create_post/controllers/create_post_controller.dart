@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+// ❌ import 'dart:io'; // এই লাইনটি রিমুভ করা হয়েছে কারণ এটি ওয়েবে ক্র্যাশ করায়
 import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,9 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:meetyarah/data/clients/service.dart';
 import 'package:meetyarah/data/utils/urls.dart';
 import 'package:meetyarah/ui/home/controllers/get_post_controllers.dart';
-
 import 'package:meetyarah/ui/home/screens/baseScreens.dart';
-
 import '../../login_reg_screens/controllers/auth_service.dart';
 
 class CreatePostController extends GetxController {
@@ -19,7 +17,7 @@ class CreatePostController extends GetxController {
 
   final AuthService _authService = Get.find<AuthService>();
 
-  // images এখন List<XFile>
+  // পোস্ট ক্রিয়েট ফাংশন
   Future<void> createPost({List<XFile>? images}) async {
     final String content = postTitleCtrl.text.trim();
     final String? userId = _authService.userId;
@@ -38,10 +36,12 @@ class CreatePostController extends GetxController {
       isLoading(true);
       String? imageUrl;
 
+      // ইমেজ আপলোড
       if (images != null && images.isNotEmpty) {
         imageUrl = await _uploadImage(images.first);
         if (imageUrl == null) {
           isLoading(false);
+          Get.snackbar("Error", "Image upload failed");
           return;
         }
       }
@@ -61,9 +61,12 @@ class CreatePostController extends GetxController {
       if (response.statusCode == 200 && data['status'] == 'success') {
         Get.snackbar("Success", "Post created successfully!");
         postTitleCtrl.clear();
+
+        // ফিড রিফ্রেশ করা
         if (Get.isRegistered<GetPostController>()) {
           Get.find<GetPostController>().getAllPost();
         }
+
         Get.offAll(() => const Basescreens());
       } else {
         Get.snackbar("Error", data['message'] ?? "Failed to create post");
@@ -76,16 +79,17 @@ class CreatePostController extends GetxController {
     }
   }
 
+  // ইমেজ আপলোড ফাংশন (Web Safe)
   Future<String?> _uploadImage(XFile xfile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(Urls.uploadImageApi));
 
       if (kIsWeb) {
-        // ✅ ওয়েবের জন্য
+        // ✅ ওয়েবের জন্য: বাইটস হিসেবে পাঠানো
         var bytes = await xfile.readAsBytes();
         request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: xfile.name));
       } else {
-        // ✅ মোবাইলের জন্য
+        // ✅ মোবাইলের জন্য: পাথ হিসেবে পাঠানো
         request.files.add(await http.MultipartFile.fromPath('image', xfile.path));
       }
 
@@ -98,6 +102,7 @@ class CreatePostController extends GetxController {
           return json['image_url'];
         }
       }
+      print("Upload Failed: ${response.body}");
       return null;
     } catch (e) {
       print("Upload Exception: $e");

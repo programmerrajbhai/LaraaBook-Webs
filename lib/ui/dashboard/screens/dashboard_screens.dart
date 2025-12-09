@@ -1,317 +1,417 @@
 import 'package:flutter/material.dart';
-// আপনার কালার ফাইলটি import করুন
-// import 'package:meetyarah/assetsPath/textColors.dart';
+import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:meetyarah/ui/create_post/screens/create_post.dart';
+import 'package:meetyarah/ui/view_post/screens/post_details.dart';
 
-// --- ডেমো ডেটার জন্য মডেল ক্লাস ---
+import '../../profile/controllers/profile_controllers.dart';
 
-// 1. পোস্ট পারফরম্যান্স মডেল
-class PostPerformance {
+// --- DASHBOARD DATA MODELS (Local for UI) ---
+class DashboardStat {
   final String title;
-  final String imageUrl;
-  final int views;
-  final int likes;
-  final int comments;
-
-  PostPerformance({
-    required this.title,
-    required this.imageUrl,
-    required this.views,
-    required this.likes,
-    required this.comments,
-  });
+  final String value;
+  final IconData icon;
+  final Color color;
+  DashboardStat(this.title, this.value, this.icon, this.color);
 }
 
-// 2. সাম্প্রতিক অ্যাক্টিভিটি মডেল
-class RecentActivity {
-  final String userName;
-  final String userImageUrl;
-  final String activity; // যেমন: "liked your post", "started following you"
-  final String timeAgo;
-
-  RecentActivity({
-    required this.userName,
-    required this.userImageUrl,
-    required this.activity,
-    required this.timeAgo,
-  });
-}
-
-// --- মূল ড্যাশবোর্ড স্ক্রিন ---
-
-class ActivityDashboardScreen extends StatefulWidget {
-  const ActivityDashboardScreen({Key? key}) : super(key: key);
-
-  @override
-  _ActivityDashboardScreenState createState() =>
-      _ActivityDashboardScreenState();
-}
-
-class _ActivityDashboardScreenState extends State<ActivityDashboardScreen> {
-  // --- ডেমো ডেটা ---
-  final Map<String, dynamic> _overviewStats = {
-    'posts': 124,
-    'likes': 8200,
-    'followers': 1350,
-    'profileViews': 21300,
-  };
-
-  final List<PostPerformance> _recentPosts = [
-    PostPerformance(
-      title: "Just released my new Meetyarah app project... 🔥",
-      imageUrl: "https://images.unsplash.com/photo-1542393545-10f5cde2c810?q=80&w=1965&auto=format&fit=crop",
-      views: 5200,
-      likes: 310,
-      comments: 45,
-    ),
-    PostPerformance(
-      title: "Exploring the beautiful mountains this weekend!",
-      imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop",
-      views: 12000,
-      likes: 1100,
-      comments: 120,
-    ),
-    PostPerformance(
-      title: "My setup for coding.",
-      imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=2070&auto=format&fit=crop",
-      views: 2100,
-      likes: 150,
-      comments: 22,
-    ),
-  ];
-
-  final List<RecentActivity> _recentActivity = [
-    RecentActivity(
-      userName: 'Rina Akter',
-      userImageUrl: 'https://i.pravatar.cc/150?img=49',
-      activity: 'liked your post.',
-      timeAgo: '5m ago',
-    ),
-    RecentActivity(
-      userName: 'Masum Billah',
-      userImageUrl: 'https://i.pravatar.cc/150?img=51',
-      activity: 'started following you.',
-      timeAgo: '1h ago',
-    ),
-    RecentActivity(
-      userName: 'John Doe',
-      userImageUrl: 'https://i.pravatar.cc/150?img=53',
-      activity: 'commented: "Great work!"',
-      timeAgo: '3h ago',
-    ),
-    RecentActivity(
-      userName: 'Sabiha Islam',
-      userImageUrl: 'https://i.pravatar.cc/150?img=45',
-      activity: 'liked your comment.',
-      timeAgo: '8h ago',
-    ),
-  ];
-  // --- ডেমো ডেটা শেষ ---
+class ActivityDashboardScreens extends StatelessWidget {
+  const ActivityDashboardScreens({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ProfileController controller = Get.put(ProfileController());
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5), // হালকা ধূসর ব্যাকগ্রাউন্ড
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
+      backgroundColor: Colors.white,
+      appBar: _buildAppBar(controller),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // Web Centered Layout Logic
+            bool isWide = constraints.maxWidth > 900;
+            double contentWidth = isWide ? 800 : constraints.maxWidth;
+
+            return Center(
+              child: SizedBox(
+                width: contentWidth,
+                child: DefaultTabController(
+                  length: 3, // Posts, Dashboard, Tagged
+                  child: NestedScrollView(
+                    headerSliverBuilder: (context, _) {
+                      return [
+                        SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildProfileHeader(controller),
+                          ]),
+                        ),
+                        SliverPersistentHeader(
+                          delegate: _SliverAppBarDelegate(
+                            const TabBar(
+                              indicatorColor: Colors.black87,
+                              labelColor: Colors.black87,
+                              unselectedLabelColor: Colors.grey,
+                              indicatorWeight: 2,
+                              tabs: [
+                                Tab(icon: Icon(Icons.grid_on), text: "Posts"),
+                                Tab(icon: Icon(Icons.bar_chart_rounded), text: "Dashboard"),
+                                Tab(icon: Icon(Icons.person_pin_outlined), text: "Tagged"),
+                              ],
+                            ),
+                          ),
+                          pinned: true,
+                        ),
+                      ];
+                    },
+                    body: TabBarView(
+                      children: [
+                        _buildPostsGrid(controller),      // Tab 1
+                        _buildDashboardTab(controller),   // Tab 2 (Merged Dashboard)
+                        _buildTaggedGrid(),               // Tab 3
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+
+  // --- APP BAR ---
+  AppBar _buildAppBar(ProfileController controller) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: false,
+      title: Obx(() => Text(
+        controller.profileUser.value?.username ?? "Loading...",
+        style: GoogleFonts.inter(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
+      )),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add_box_outlined, color: Colors.black),
+          tooltip: "Create Post",
+          onPressed: () => Get.to(() => const CreatePostScreen()),
+        ),
+        IconButton(
+          icon: const Icon(Icons.menu, color: Colors.black),
+          onPressed: () {
+            // Bottom Sheet Menu for Settings/Logout
+            Get.bottomSheet(
+              Container(
+                color: Colors.white,
+                child: Wrap(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text("Logout"),
+                      onTap: () {
+                        Get.back();
+                        controller.logout();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(width: 10),
+      ],
+    );
+  }
+
+  // --- PROFILE HEADER (User Info) ---
+  Widget _buildProfileHeader(ProfileController controller) {
+    final user = controller.profileUser.value;
+    final postCount = controller.myPosts.length.toString();
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- সেকশন ১: ওভারভিউ ---
-          Text(
-            'Overview (Last 30 days)',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              // Profile Image
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: NetworkImage(user?.profilePictureUrl ?? "https://i.pravatar.cc/150?img=12"),
+                    fit: BoxFit.cover,
+                  ),
+                  border: Border.all(color: Colors.grey.shade300, width: 2),
+                ),
+              ),
+              const SizedBox(width: 20),
+
+              // Stats Row
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem(postCount, "Posts"),
+                    _buildStatItem("1.2k", "Followers"), // Dummy
+                    _buildStatItem("350", "Following"),  // Dummy
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          _buildStatsGrid(), // ওভারভিউ কার্ড গ্রিড
 
-          const SizedBox(height: 24),
-
-          // --- সেকশন ২: পোস্ট পারফরম্যান্স ---
+          // Name & Bio
           Text(
-            'Post Performance',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            user?.fullName ?? "Unknown",
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          if (user?.username != null)
+            Text("@${user!.username}", style: const TextStyle(color: Colors.grey, fontSize: 14)),
+
+          const SizedBox(height: 6),
+          const Text(
+            "💻 Flutter Developer & Content Creator\n🌍 Creating amazing apps with GetX\n👇 Check my dashboard for insights!",
+            style: TextStyle(fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 16),
-          _buildPostPerformanceList(), // পোস্টের লিস্ট
 
-          const SizedBox(height: 24),
-
-          // --- সেকশন ৩: সাম্প্রতিক অ্যাক্টিভিটি ---
-          Text(
-            'Recent Activity',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          // Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text("Edit Profile"),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.black,
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text("Share Profile"),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildRecentActivityList(), // অ্যাক্টিভিটি লিস্ট
         ],
       ),
     );
   }
 
-  /// 1. ওভারভিউ স্ট্যাট গ্রিড
-  Widget _buildStatsGrid() {
-    return GridView.count(
-      crossAxisCount: 2, // প্রতি সারিতে ২টি কার্ড
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      shrinkWrap: true, // ListView-এর ভিতরে GridView ব্যবহারের জন্য
-      physics: const NeverScrollableScrollPhysics(), // ListView-এর স্ক্রল ব্যবহার করবে
+  Widget _buildStatItem(String count, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _buildStatCard(
-          title: 'Total Posts',
-          value: _overviewStats['posts'].toString(),
-          icon: Icons.article,
-          color: Colors.blue,
+        Text(count, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+      ],
+    );
+  }
+
+  // --- TAB 1: POSTS GRID ---
+  Widget _buildPostsGrid(ProfileController controller) {
+    if (controller.myPosts.isEmpty) {
+      return _buildEmptyState("No posts yet", Icons.camera_alt_outlined);
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(2),
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: controller.myPosts.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 2,
+        mainAxisSpacing: 2,
+        childAspectRatio: 1,
+      ),
+      itemBuilder: (context, index) {
+        final post = controller.myPosts[index];
+        return GestureDetector(
+          onTap: () => Get.to(() => PostDetailPage(post: post)),
+          child: Container(
+            color: Colors.grey[100],
+            child: post.image_url != null
+                ? Image.network(post.image_url!, fit: BoxFit.cover)
+                : const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
+          ),
+        );
+      },
+    );
+  }
+
+  // --- TAB 2: DASHBOARD (MERGED) ---
+  Widget _buildDashboardTab(ProfileController controller) {
+    // ডামি ড্যাশবোর্ড ডাটা (বাস্তবে API থেকে আসতে পারে)
+    final stats = [
+      DashboardStat("Accounts Reached", "12.5K", Icons.people_outline, Colors.blue),
+      DashboardStat("Content Interactions", "4.2K", Icons.touch_app_outlined, Colors.orange),
+      DashboardStat("Total Followers", "1,230", Icons.person_add_outlined, Colors.green),
+      DashboardStat("Approx. Earnings", "\$120.50", Icons.attach_money, Colors.purple),
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        // Title
+        Text("Professional Dashboard", style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 5),
+        const Text("Insights from the last 30 days", style: TextStyle(color: Colors.grey, fontSize: 12)),
+        const SizedBox(height: 20),
+
+        // Stats Grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: stats.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.6,
+          ),
+          itemBuilder: (context, index) {
+            return _buildDashboardCard(stats[index]);
+          },
         ),
-        _buildStatCard(
-          title: 'Total Likes',
-          value: (_overviewStats['likes'] / 1000).toStringAsFixed(1) + 'k', // 8.2k
-          icon: Icons.thumb_up,
-          color: Colors.red,
-        ),
-        _buildStatCard(
-          title: 'Followers',
-          value: _overviewStats['followers'].toString(),
-          icon: Icons.people,
-          color: Colors.green,
-        ),
-        _buildStatCard(
-          title: 'Profile Views',
-          value: (_overviewStats['profileViews'] / 1000).toStringAsFixed(1) + 'k', // 21.3k
-          icon: Icons.visibility,
-          color: Colors.orange,
+
+        const SizedBox(height: 20),
+
+        // Recent Performance List
+        const Text("Recent Performance", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 10),
+        _buildPerformanceTile("Most Viewed Post", "5.2K Views", Icons.remove_red_eye_outlined),
+        _buildPerformanceTile("Top Commented", "120 Comments", Icons.comment_outlined),
+        _buildPerformanceTile("Profile Visits", "310 Visits", Icons.person_search_outlined),
+
+        const SizedBox(height: 20),
+        // Ad/Banner Area
+        Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue.shade100),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.auto_graph, color: Colors.blue, size: 30),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text("Boost your profile", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                  Text("Reach more people today", style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                ],
+              )
+            ],
+          ),
         ),
       ],
     );
   }
 
-  // একটি স্ট্যাট কার্ডের ডিজাইন
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
+  Widget _buildDashboardCard(DashboardStat stat) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 2))],
       ),
-    );
-  }
-
-  /// 2. পোস্ট পারফরম্যান্স লিস্ট
-  Widget _buildPostPerformanceList() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias, // ListTile-এর কোণগুলো গোল করার জন্য
       child: Column(
-        // Column ব্যবহার করা হয়েছে কারণ ListView-এর ভিতরে আরেকটি ListView.builder
-        // ব্যবহার করা ভালো প্র্যাকটিস নয় (যদি না লিস্টটি খুব বড় হয়)।
-        children: _recentPosts.map((post) {
-          return _buildPostPerformanceTile(post);
-        }).toList(),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(stat.icon, color: stat.color, size: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(stat.value, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(stat.title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  // একটি পোস্ট পারফরম্যান্স আইটেমের ডিজাইন
-  Widget _buildPostPerformanceTile(PostPerformance post) {
+  Widget _buildPerformanceTile(String title, String value, IconData icon) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8.0),
-        child: Image.network(
-          post.imageUrl,
-          width: 50,
-          height: 50,
-          fit: BoxFit.cover,
-        ),
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+        child: Icon(icon, color: Colors.black87, size: 20),
       ),
-      title: Text(
-        post.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        '${post.views} views • ${post.likes} likes • ${post.comments} comments',
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-      onTap: () {
-        // TODO: এই পোস্টের বিস্তারিত অ্যানালিটিক্স পেজে নেভিগেট করুন
-      },
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
     );
   }
 
-  /// 3. সাম্প্রতিক অ্যাক্টিভিটি লিস্ট
-  Widget _buildRecentActivityList() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias,
+  // --- TAB 3: TAGGED (Placeholder) ---
+  Widget _buildTaggedGrid() {
+    return _buildEmptyState("No tagged photos", Icons.person_pin_outlined);
+  }
+
+  Widget _buildEmptyState(String msg, IconData icon) {
+    return Center(
       child: Column(
-        children: _recentActivity.map((activity) {
-          return _buildActivityTile(activity);
-        }).toList(),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 50, color: Colors.grey[300]),
+          const SizedBox(height: 10),
+          Text(msg, style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+        ],
       ),
     );
   }
+}
 
-  // একট
-  Widget _buildActivityTile(RecentActivity activity) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundImage: NetworkImage(activity.userImageUrl),
-      ),
-      title: RichText(
-        text: TextSpan(
-          style: DefaultTextStyle.of(context).style,
-          children: [
-            TextSpan(
-              text: activity.userName,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            TextSpan(text: ' ${activity.activity}'),
-          ],
-        ),
-      ),
-      subtitle: Text(
-        activity.timeAgo,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-      onTap: () {
-        // TODO: এই ইউজারের প্রোফাইল বা নির্দিষ্ট পোস্টে নেভিগেট করুন
-      },
+// --- HELPER FOR STICKY TABS ---
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+  _SliverAppBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white, // Sticky background color
+      child: _tabBar,
     );
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return false;
   }
 }

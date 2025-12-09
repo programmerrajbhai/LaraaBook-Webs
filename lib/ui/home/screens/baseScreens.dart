@@ -6,6 +6,7 @@ import 'package:meetyarah/ui/create_post/screens/create_post.dart';
 import 'package:meetyarah/ui/dashboard/screens/dashboard_screens.dart';
 import 'package:meetyarah/ui/home/screens/feed_screen.dart' hide ReelScreens;
 import 'package:meetyarah/ui/menu_list/screens/menu_item_screens.dart';
+import 'package:meetyarah/ui/profile/screens/profile_screens.dart';
 import '../../reels/screens/reel_screens.dart';
 
 class Basescreens extends StatefulWidget {
@@ -16,15 +17,14 @@ class Basescreens extends StatefulWidget {
 }
 
 class _BasescreensState extends State<Basescreens> {
-  // Current selected index
   int _selectedIndex = 0;
 
-  // Define pages in a getter to ensure they are re-built if needed/safe
+  // ✅ FIX: Getter ব্যবহার করা হয়েছে যাতে Null Error না আসে
   List<Widget> get _pages => [
     const FeedScreen(),
     const ReelScreens(),
     const CreatePostScreen(),
-    const ActivityDashboardScreen(),
+    const ActivityDashboardScreens(),
     MenuScreen(),
   ];
 
@@ -36,22 +36,18 @@ class _BasescreensState extends State<Basescreens> {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen size
     final size = MediaQuery.of(context).size;
-    // Determine if we should use desktop layout (> 800px)
-    final bool isWebDesktop = size.width > 800;
+    bool isWebDesktop = size.width > 800;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
 
-      // --- APP BAR ---
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        // Adjust spacing based on layout
         titleSpacing: isWebDesktop ? 30 : 20,
         title: Text(
-          "Smart Dimla",
+          "MEETYARAH",
           style: GoogleFonts.bebasNeue(
             fontSize: 34,
             fontWeight: FontWeight.w500,
@@ -67,7 +63,6 @@ class _BasescreensState extends State<Basescreens> {
         ],
       ),
 
-      // --- BODY ---
       body: isWebDesktop
           ? _buildWebLayout()
           : IndexedStack(
@@ -75,7 +70,6 @@ class _BasescreensState extends State<Basescreens> {
         children: _pages,
       ),
 
-      // --- BOTTOM NAVIGATION (Mobile Only) ---
       bottomNavigationBar: isWebDesktop
           ? null
           : Container(
@@ -83,9 +77,9 @@ class _BasescreensState extends State<Basescreens> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5)
             )
           ],
         ),
@@ -106,38 +100,23 @@ class _BasescreensState extends State<Basescreens> {
     );
   }
 
-  // --- WEB LAYOUT STRUCTURE ---
   Widget _buildWebLayout() {
     return Row(
       children: [
-        // 1. Navigation Rail (Side Menu)
         NavigationRail(
           selectedIndex: _selectedIndex,
           onDestinationSelected: _onItemTapped,
           labelType: NavigationRailLabelType.all,
           backgroundColor: Colors.white,
-          // Fixed: Border used inside BoxDecoration logic via Container/VerticalDivider
-          groupAlignment: -1.0, // Top aligned
+          groupAlignment: -1.0,
           indicatorColor: ColorPath.deepBlue.withOpacity(0.1),
           selectedIconTheme: const IconThemeData(color: ColorPath.deepBlue),
           unselectedIconTheme: const IconThemeData(color: Colors.grey),
-          unselectedLabelTextStyle: GoogleFonts.inter(
-            color: Colors.grey,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-          selectedLabelTextStyle: GoogleFonts.inter(
-            color: ColorPath.deepBlue,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+          unselectedLabelTextStyle: GoogleFonts.inter(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500),
+          selectedLabelTextStyle: GoogleFonts.inter(color: ColorPath.deepBlue, fontWeight: FontWeight.bold, fontSize: 12),
           destinations: _getNavRailDestinations(),
         ),
-
-        // Divider Line
         VerticalDivider(thickness: 1, width: 1, color: Colors.grey.shade200),
-
-        // 2. Main Content Area (Centered)
         Expanded(
           child: Center(
             child: Container(
@@ -149,9 +128,7 @@ class _BasescreensState extends State<Basescreens> {
             ),
           ),
         ),
-
-        // 3. Right Side (Suggestions/Ads) - Only on large screens
-        if (MediaQuery.of(context).size.width > 1200)
+        if(MediaQuery.of(context).size.width > 1200)
           Container(
             width: 300,
             decoration: BoxDecoration(
@@ -164,104 +141,53 @@ class _BasescreensState extends State<Basescreens> {
                 style: GoogleFonts.inter(color: Colors.grey[400]),
               ),
             ),
-          ),
-      ],
-    );
-  }
-
-  // --- WIDGET HELPER: Action Buttons ---
-  Widget _buildActionButton(IconData icon, VoidCallback onTap, {bool isNotification = false}) {
-    return Stack(
-      children: [
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            icon: Icon(icon, color: Colors.black87, size: 22),
-            onPressed: onTap,
-            splashRadius: 20,
-          ),
-        ),
-        if (isNotification)
-          Positioned(
-            right: 6,
-            top: 10,
-            child: Container(
-              height: 9,
-              width: 9,
-              decoration: BoxDecoration(
-                color: Colors.redAccent,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-            ),
           )
       ],
     );
   }
 
-  // --- DATA: Navigation Items (Mobile) ---
+  Widget _buildActionButton(IconData icon, VoidCallback onTap, {bool isNotification = false}) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
+          child: IconButton(icon: Icon(icon, color: Colors.black87, size: 22), onPressed: onTap, splashRadius: 20),
+        ),
+        if (isNotification)
+          Positioned(right: 6, top: 10, child: Container(height: 9, width: 9, decoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)))),
+      ],
+    );
+  }
+
   List<BottomNavigationBarItem> _getNavItems() {
     return [
       const BottomNavigationBarItem(icon: Icon(Icons.style_outlined), activeIcon: Icon(Icons.style), label: "Feed"),
       const BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), activeIcon: Icon(Icons.play_circle_fill), label: "Reels"),
-
-      // Highlighted "Create" Button
       BottomNavigationBarItem(
         icon: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [ColorPath.deepBlue, Colors.purpleAccent]),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: ColorPath.deepBlue.withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ],
+              gradient: const LinearGradient(colors: [ColorPath.deepBlue, Colors.purpleAccent]),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [BoxShadow(color: ColorPath.deepBlue.withOpacity(0.4), blurRadius: 8, offset: const Offset(0,4))]
           ),
           child: const Icon(Icons.add, color: Colors.white),
         ),
         label: "Create",
       ),
-
-      const BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: "Dash"),
+      const BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: "Profile"),
       const BottomNavigationBarItem(icon: Icon(Icons.menu), activeIcon: Icon(Icons.menu_open), label: "Menu"),
     ];
   }
 
-  // --- DATA: Navigation Rail Items (Web) ---
   List<NavigationRailDestination> _getNavRailDestinations() {
     return [
-      const NavigationRailDestination(
-        icon: Icon(Icons.style_outlined),
-        selectedIcon: Icon(Icons.style),
-        label: Text("Feed"),
-      ),
-      const NavigationRailDestination(
-        icon: Icon(Icons.play_circle_outline),
-        selectedIcon: Icon(Icons.play_circle_fill),
-        label: Text("Reels"),
-      ),
-      const NavigationRailDestination(
-        icon: Icon(Icons.add_box_outlined),
-        selectedIcon: Icon(Icons.add_box),
-        label: Text("Create"),
-      ),
-      const NavigationRailDestination(
-        icon: Icon(Icons.dashboard_outlined),
-        selectedIcon: Icon(Icons.dashboard),
-        label: Text("Dash"),
-      ),
-      const NavigationRailDestination(
-        icon: Icon(Icons.menu),
-        selectedIcon: Icon(Icons.menu_open),
-        label: Text("Menu"),
-      ),
+      const NavigationRailDestination(icon: Icon(Icons.style_outlined), selectedIcon: Icon(Icons.style), label: Text("Feed")),
+      const NavigationRailDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle_fill), label: Text("Reels")),
+      const NavigationRailDestination(icon: Icon(Icons.add_box_outlined), selectedIcon: Icon(Icons.add_box), label: Text("Create")),
+      const NavigationRailDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: Text("Profile")),
+      const NavigationRailDestination(icon: Icon(Icons.menu), selectedIcon: Icon(Icons.menu_open), label: Text("Menu")),
     ];
   }
 }

@@ -14,7 +14,7 @@ class CreatePostController extends GetxController {
   final TextEditingController postTitleCtrl = TextEditingController();
 
   var isLoading = false.obs;
-  // ✅ ১. নতুন ভেরিয়েবল: ডাইরেক্ট লিংক সুইচ
+  // ✅ নতুন ভেরিয়েবল
   var isDirectLink = false.obs;
 
   final AuthService _authService = Get.find<AuthService>();
@@ -37,7 +37,6 @@ class CreatePostController extends GetxController {
       isLoading(true);
       String? imageUrl;
 
-      // ইমেজ আপলোড লজিক
       if (images != null && images.isNotEmpty) {
         imageUrl = await _uploadImage(images.first);
         if (imageUrl == null) {
@@ -47,7 +46,6 @@ class CreatePostController extends GetxController {
         }
       }
 
-      // ✅ ২. API তে ডাটা পাঠানো
       var response = await http.post(
         Uri.parse(Urls.createPostApi),
         headers: {"Content-Type": "application/json"},
@@ -55,7 +53,7 @@ class CreatePostController extends GetxController {
           "user_id": userId,
           "post_content": content,
           "image_url": imageUrl,
-          // 🚀 এখানে আমরা পাঠাচ্ছি পোস্টটি ডাইরেক্ট লিংক কিনা
+          // ✅ API তে পাঠাচ্ছি
           "is_direct_link": isDirectLink.value ? 1 : 0,
         }),
       );
@@ -83,7 +81,6 @@ class CreatePostController extends GetxController {
     }
   }
 
-  // ইমেজ আপলোড ফাংশন (আগের মতোই)
   Future<String?> _uploadImage(XFile xfile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(Urls.uploadImageApi));

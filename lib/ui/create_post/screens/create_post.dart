@@ -138,7 +138,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 _buildCaptionInput(),
                 if (_mediaFiles.isNotEmpty) _buildMediaGrid(),
                 const Divider(),
-                _buildOptionsList(), // ✅ এখানে সুইচ বাটন আছে
+                _buildOptionsList(),
               ],
             ),
           ),
@@ -213,10 +213,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  // ✅ এই উইজেটটি আপডেট করা হয়েছে
   Widget _buildOptionsList() {
     return Column(children: [
-      // 🚀 Direct Link Switch
+      // ✅ ডাইরেক্ট লিংক সুইচ যোগ করা হলো
       Obx(() => SwitchListTile(
         title: const Text("Enable Direct Link", style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: const Text("User click on this post will open Direct Ad Link."),

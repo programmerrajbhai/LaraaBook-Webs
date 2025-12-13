@@ -1,5 +1,5 @@
-import 'dart:io' as io; // ✅ Prefix যোগ করা হয়েছে যাতে কনফ্লিক্ট না হয়
-import 'package:flutter/foundation.dart'; // kIsWeb
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -32,14 +32,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
   }
 
-  // --- Submit Post ---
   void _submitPost() {
     if (!_isPostButtonEnabled) return;
     FocusScope.of(context).unfocus();
     createdPostController.createPost(images: _mediaFiles);
   }
 
-  // --- Pick Image ---
   Future<void> _pickImage() async {
     final List<XFile> images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
@@ -50,7 +48,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  // --- Pick Video ---
   Future<void> _pickVideo() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
     if (video != null) {
@@ -61,7 +58,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  // ✅ Remove Image
   void _removeMedia(int index) {
     setState(() {
       _mediaFiles.removeAt(index);
@@ -69,7 +65,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
   }
 
-  // ✅ Back Button Fixed
   void _handleBack() {
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
@@ -85,7 +80,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       appBar: _buildAppBar(),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Responsive: Desktop Center View
           if (constraints.maxWidth > 800) {
             return Center(
               child: Container(
@@ -144,7 +138,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 _buildCaptionInput(),
                 if (_mediaFiles.isNotEmpty) _buildMediaGrid(),
                 const Divider(),
-                _buildOptionsList(),
+                _buildOptionsList(), // ✅ এখানে সুইচ বাটন আছে
               ],
             ),
           ),
@@ -155,17 +149,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  // ✅ SAFE IMAGE WIDGET
   Widget _buildImageWidget(XFile file) {
     if (file.path.toLowerCase().endsWith('.mp4') || file.path.toLowerCase().endsWith('.mov')) {
       return Container(color: Colors.black, child: const Center(child: Icon(Icons.play_circle_outline, color: Colors.white, size: 50)));
     }
-
-    // ✅ Web এ Network Image ব্যবহার হবে
     if (kIsWeb) {
       return Image.network(file.path, fit: BoxFit.cover);
     } else {
-      // ✅ Mobile এ File Image ব্যবহার হবে
       return Image.file(io.File(file.path), fit: BoxFit.cover);
     }
   }
@@ -223,8 +213,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  // ✅ এই উইজেটটি আপডেট করা হয়েছে
   Widget _buildOptionsList() {
     return Column(children: [
+      // 🚀 Direct Link Switch
+      Obx(() => SwitchListTile(
+        title: const Text("Enable Direct Link", style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: const Text("User click on this post will open Direct Ad Link."),
+        secondary: const Icon(Icons.ads_click, color: Colors.blue),
+        value: createdPostController.isDirectLink.value,
+        activeColor: Colors.blueAccent,
+        onChanged: (val) {
+          createdPostController.isDirectLink.value = val;
+        },
+      )),
+      const Divider(),
       ListTile(leading: const Icon(Icons.location_on, color: Colors.red), title: const Text("Add Location"), trailing: const Icon(Icons.chevron_right)),
     ]);
   }

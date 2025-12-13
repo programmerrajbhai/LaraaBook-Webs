@@ -3,7 +3,6 @@ import 'package:flutter/services.dart'; // Clipboard
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 import '../../home/models/get_post_model.dart';
 import '../../home/controllers/like_controller.dart';
@@ -43,7 +42,33 @@ class _PostDetailPageState extends State<PostDetailPage> {
     likeCount = widget.post.like_count ?? 0;
   }
 
-  // --- ACTIONS (Copied from Feed logic for consistency) ---
+  // 🕒 Helper: Time Ago Formatter (TimeZone Fix)
+  // ✅ এই ফাংশনটি নতুন যোগ করা হয়েছে টাইম ঠিক করার জন্য
+  String _formatTimeAgo(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "Just now";
+    try {
+      DateTime date;
+      // সার্ভারের টাইমের সাথে 'Z' যোগ করে UTC হিসেবে পার্স করা
+      if (!dateString.endsWith("Z")) {
+        date = DateTime.parse("${dateString}Z").toLocal();
+      } else {
+        date = DateTime.parse(dateString).toLocal();
+      }
+
+      Duration diff = DateTime.now().difference(date);
+
+      if (diff.inDays > 365) return "${(diff.inDays / 365).floor()}y ago";
+      if (diff.inDays > 30) return "${(diff.inDays / 30).floor()}mo ago";
+      if (diff.inDays > 0) return "${diff.inDays}d ago";
+      if (diff.inHours > 0) return "${diff.inHours}h ago";
+      if (diff.inMinutes > 0) return "${diff.inMinutes}m ago";
+      return "Just now";
+    } catch (e) {
+      return "Just now";
+    }
+  }
+
+  // --- ACTIONS ---
 
   void _handleAction({required String message, VoidCallback? action}) {
     if (Get.isBottomSheetOpen ?? false) Get.back();
@@ -106,7 +131,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5), // Web/FB Style BG
+      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         title: Text(widget.post.full_name ?? "Post Details", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18)),
         backgroundColor: Colors.white,
@@ -127,20 +152,17 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 decoration: isWeb ? BoxDecoration(color: Colors.white, border: Border.symmetric(vertical: BorderSide(color: Colors.grey.shade300))) : null,
                 child: Column(
                   children: [
-                    // --- Scrollable Content (Post + Comments) ---
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
                             _buildPostContent(),
-                            const Divider(thickness: 8, color: Color(0xFFF0F2F5)), // Separator
+                            const Divider(thickness: 8, color: Color(0xFFF0F2F5)),
                             _buildCommentSection(),
                           ],
                         ),
                       ),
                     ),
-
-                    // --- Sticky Input Field ---
                     _buildCommentInput(),
                   ],
                 ),
@@ -168,8 +190,18 @@ class _PostDetailPageState extends State<PostDetailPage> {
               radius: 20,
               backgroundImage: NetworkImage(widget.post.profile_picture_url ?? "https://via.placeholder.com/150"),
             ),
-            title: Text(widget.post.full_name ?? "Unknown", style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(timeago.format(DateTime.tryParse(widget.post.created_at ?? "") ?? DateTime.now()), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            // ✅ নাম না থাকলে ID দেখানো হবে
+            title: Text(
+                (widget.post.full_name != null && widget.post.full_name!.isNotEmpty)
+                    ? widget.post.full_name!
+                    : "ID: ${widget.post.user_id}",
+                style: const TextStyle(fontWeight: FontWeight.bold)
+            ),
+            // ✅ এখানে টাইম ফিক্স করা হয়েছে
+            subtitle: Text(
+                _formatTimeAgo(widget.post.created_at),
+                style: const TextStyle(fontSize: 12, color: Colors.grey)
+            ),
           ),
 
           // Text
@@ -181,7 +213,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
           const SizedBox(height: 10),
 
-          // Image (Clickable & Zoomable)
+          // Image
           if (widget.post.image_url != null && widget.post.image_url!.isNotEmpty)
             GestureDetector(
               onTap: _openFullImage,
@@ -219,7 +251,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             child: Row(
               children: [
                 Expanded(child: _buildReactionButton()),
-                Expanded(child: _actionButton(Icons.mode_comment_outlined, "Comment", () {})), // Just focuses input implicitly
+                Expanded(child: _actionButton(Icons.mode_comment_outlined, "Comment", () {})),
                 Expanded(child: _actionButton(Icons.share_outlined, "Share", _showShareOptions)),
               ],
             ),
@@ -273,7 +305,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100], // Modern light bubble
+                    color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Column(
@@ -289,7 +321,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   padding: const EdgeInsets.only(left: 12, top: 4),
                   child: Row(
                     children: [
-                      Text(timeago.format(DateTime.now().subtract(const Duration(minutes: 5))), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      // ✅ কমেন্টের সময়ও ফিক্স করা হলো (যদি createdAt থাকে)
+                      Text(_formatTimeAgo(comment.createdAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(width: 16),
                       const Text("Like", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
                       const SizedBox(width: 16),
@@ -317,7 +350,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       child: SafeArea(
         child: Row(
           children: [
-            const CircleAvatar(radius: 18, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=12")), // Current User
+            const CircleAvatar(radius: 18, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=12")),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
@@ -352,7 +385,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
           isLiked = !isLiked;
           likeCount += isLiked ? 1 : -1;
         });
-        // Call API
         int idx = int.tryParse(widget.post.post_id.toString()) ?? 0;
         likeController.toggleLike(idx);
       },
@@ -426,7 +458,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   }
 }
 
-// ✅ Feedback Button (Same as Feed)
+// ✅ Feedback Button
 class _FeedbackButton extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;

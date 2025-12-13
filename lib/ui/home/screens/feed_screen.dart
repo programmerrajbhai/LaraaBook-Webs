@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart'; // ✅ Link ওপেন করার জন্য এই প্যাকেজটি লাগবে
 
 import '../../../adsterra/controller/adsterra_controller.dart';
 import '../../../adsterra/widgets/simple_ad_widget.dart';
@@ -14,6 +15,7 @@ import '../controllers/like_controller.dart';
 import '../../view_post/screens/post_details.dart';
 import '../../create_post/screens/create_post.dart';
 import '../widgets/like_button.dart';
+import '../widgets/adblock_alert.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -29,24 +31,47 @@ class _FeedScreenState extends State<FeedScreen> {
 
   final bool _showDemoAds = kDebugMode;
 
+  // ✅ 1. ডাইরেক্ট লিংক সেটআপ
+  final String _directLinkUrl = "https://www.google.com"; // 🔴 আপনার Adsterra Direct Link এখানে দিন
+  int _clickCount = 0; // ক্লিক গুনার জন্য
+
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkAdBlocker();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdBlocker();
+    });
   }
 
   Future<void> _checkAdBlocker() async {
     try {
       final response = await http.get(Uri.parse("https://pl25522730.effectivegatecpm.com/dd/4f/78/dd4f7878c3a97f6f9e08bdf8911ad44b.js"));
       if (response.statusCode != 200 || response.body.isEmpty) {
-        // AdBlock detected logic
+        if (mounted) AdBlockWarningDialog.show(context);
       }
     } catch (e) {
-      // Ignore
+      if (mounted) AdBlockWarningDialog.show(context);
+    }
+  }
+
+  // ✅ 2. পোস্ট ক্লিক হ্যান্ডলার (৩ ক্লিক পরপর লিংক রান করবে)
+  Future<void> _handlePostClick(dynamic post) async {
+    _clickCount++; // ক্লিক বাড়াচ্ছি
+    print("Post Click Count: $_clickCount");
+
+    if (_clickCount % 3 == 0) {
+      // ৩, ৬, ৯... তম ক্লিকে ডাইরেক্ট লিংক রান করবে
+      final Uri url = Uri.parse(_directLinkUrl);
+
+      // ডাইরেক্ট লিংক ওপেন করা
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication); // ব্রাউজারে ওপেন হবে
+      } else {
+        Get.snackbar("Error", "Could not launch link", snackPosition: SnackPosition.BOTTOM);
+      }
+    } else {
+      // অন্যথায় পোস্ট ডিটেইলসে যাবে
+      Get.to(() => PostDetailPage(post: post));
     }
   }
 
@@ -67,13 +92,35 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  // 🕒 Helper: Time Ago Formatter
+  String _formatTimeAgo(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "Just now";
+    try {
+      DateTime date;
+      if (!dateString.endsWith("Z")) {
+        date = DateTime.parse("${dateString}Z").toLocal();
+      } else {
+        date = DateTime.parse(dateString).toLocal();
+      }
+
+      Duration diff = DateTime.now().difference(date);
+
+      if (diff.inDays > 365) return "${(diff.inDays / 365).floor()}y ago";
+      if (diff.inDays > 30) return "${(diff.inDays / 30).floor()}mo ago";
+      if (diff.inDays > 0) return "${diff.inDays}d ago";
+      if (diff.inHours > 0) return "${diff.inHours}h ago";
+      if (diff.inMinutes > 0) return "${diff.inMinutes}m ago";
+      return "Just now";
+    } catch (e) {
+      return "Just now";
+    }
+  }
+
   // 🔗 Dynamic Link Generator
   String _getPostLink(String postId) {
     if (kIsWeb) {
-      // Web: Current Domain/Port (e.g. localhost:5555 or mydomain.com)
       return "${Uri.base.origin}/?id=$postId";
     }
-    // Mobile: Default Domain
     return "https://meetyarah.com/?id=$postId";
   }
 
@@ -236,7 +283,8 @@ class _FeedScreenState extends State<FeedScreen> {
                               return Column(
                                 children: [
                                   _buildFacebookPostCard(post, index),
-                                  if ((index + 1) % 5 == 0) _buildAdContainer(AdType.banner300, height: 260),
+                                  // ✅ 3. ফিড লিস্টে প্রতি ৩ পোস্ট পরপর অ্যাড দেখাবে
+                                  if ((index + 1) % 3 == 0) _buildAdContainer(AdType.banner300, height: 260),
                                 ],
                               );
                             },
@@ -355,8 +403,16 @@ class _FeedScreenState extends State<FeedScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(post.full_name ?? "Unknown", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text("Just now", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        (post.full_name != null && post.full_name!.isNotEmpty)
+                            ? post.full_name!
+                            : "ID: ${post.user_id ?? 'Unknown'}",
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        _formatTimeAgo(post.created_at),
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -368,7 +424,8 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
           ),
           InkWell(
-            onTap: () => Get.to(() => PostDetailPage(post: post)),
+            // ✅ 4. এখানে নতুন ক্লিক হ্যান্ডলার বসানো হয়েছে
+            onTap: () => _handlePostClick(post),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -406,7 +463,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     if ((post.like_count ?? 0) > 0) ...[const SizedBox(width: 6), Text("${post.like_count}", style: const TextStyle(color: Colors.grey, fontSize: 13))],
                   ],
                 ),
-                InkWell(onTap: () => Get.to(() => PostDetailPage(post: post)), child: Text("${post.comment_count ?? 0} Comments", style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                InkWell(onTap: () => _handlePostClick(post), child: Text("${post.comment_count ?? 0} Comments", style: const TextStyle(color: Colors.grey, fontSize: 13))),
               ],
             ),
           ),
@@ -416,7 +473,7 @@ class _FeedScreenState extends State<FeedScreen> {
             child: Row(
               children: [
                 Expanded(child: _buildReactionButton(post, index)),
-                Expanded(child: _actionButton(icon: Icons.chat_bubble_outline, label: "Comment", onTap: () => Get.to(() => PostDetailPage(post: post)))),
+                Expanded(child: _actionButton(icon: Icons.chat_bubble_outline, label: "Comment", onTap: () => _handlePostClick(post))),
                 Expanded(child: _actionButton(icon: Icons.share_outlined, label: "Share", onTap: () => _showShareOptions(context, post))),
               ],
             ),
@@ -426,17 +483,14 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-
   Widget _buildReactionButton(dynamic post, int index) {
     return LikeButton(
-      isLiked: post.isLiked, // Ekhane check hobe like kora kina
+      isLiked: post.isLiked,
       onTap: () {
-        // Controller call kora hocche
         likeController.toggleLike(index);
       },
     );
   }
-
 
   Widget _actionButton({required IconData icon, required String label, required VoidCallback onTap}) {
     return _FeedbackButton(

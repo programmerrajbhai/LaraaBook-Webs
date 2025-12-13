@@ -7,10 +7,12 @@ class GetPostModel {
   String? username;
   String? full_name;
   String? profile_picture_url;
-
   int like_count;
   int comment_count;
   bool isLiked;
+
+  // ✅ ১. এই লাইনটি নতুন যোগ করা হয়েছে
+  bool isDirectLink;
 
   GetPostModel({
     this.post_id,
@@ -21,10 +23,12 @@ class GetPostModel {
     this.username,
     this.full_name,
     this.profile_picture_url,
-
-    this.like_count = 0, // ডিফল্ট ০
-    this.comment_count = 0, // ডিফল্ট ০
+    this.like_count = 0,
+    this.comment_count = 0,
     this.isLiked = false,
+
+    // ✅ ২. ডিফল্ট ফলস (False)
+    this.isDirectLink = false,
   });
 
   factory GetPostModel.fromJson(Map<String, dynamic> json) {
@@ -39,8 +43,11 @@ class GetPostModel {
       profile_picture_url: json['profile_picture_url']?.toString(),
       like_count: int.tryParse(json['like_count'].toString()) ?? 0,
       comment_count: int.tryParse(json['comment_count'].toString()) ?? 0,
+      isLiked: json['is_liked'] == true || json['is_liked'] == 1 || json['is_liked'] == "1",
 
-      isLiked: json['is_liked'] == true || json['is_liked'] == 1 || json['is_liked'] == "1",  );
+      // ✅ ৩. সার্ভার থেকে ডাটা রিসিভ করা (১ বা true হলে Sponsored হবে)
+      isDirectLink: json['is_direct_link'] == 1 || json['is_direct_link'] == "1" || json['is_direct_link'] == true,
+    );
   }
 
   static int? _toInt(dynamic value) {

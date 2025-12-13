@@ -1,5 +1,4 @@
 import 'dart:convert';
-// ❌ import 'dart:io'; // এই লাইনটি রিমুভ করা হয়েছে কারণ এটি ওয়েবে ক্র্যাশ করায়
 import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -13,11 +12,13 @@ import '../../login_reg_screens/controllers/auth_service.dart';
 
 class CreatePostController extends GetxController {
   final TextEditingController postTitleCtrl = TextEditingController();
+
   var isLoading = false.obs;
+  // ✅ ১. নতুন ভেরিয়েবল: ডাইরেক্ট লিংক সুইচ
+  var isDirectLink = false.obs;
 
   final AuthService _authService = Get.find<AuthService>();
 
-  // পোস্ট ক্রিয়েট ফাংশন
   Future<void> createPost({List<XFile>? images}) async {
     final String content = postTitleCtrl.text.trim();
     final String? userId = _authService.userId;
@@ -36,7 +37,7 @@ class CreatePostController extends GetxController {
       isLoading(true);
       String? imageUrl;
 
-      // ইমেজ আপলোড
+      // ইমেজ আপলোড লজিক
       if (images != null && images.isNotEmpty) {
         imageUrl = await _uploadImage(images.first);
         if (imageUrl == null) {
@@ -46,6 +47,7 @@ class CreatePostController extends GetxController {
         }
       }
 
+      // ✅ ২. API তে ডাটা পাঠানো
       var response = await http.post(
         Uri.parse(Urls.createPostApi),
         headers: {"Content-Type": "application/json"},
@@ -53,6 +55,8 @@ class CreatePostController extends GetxController {
           "user_id": userId,
           "post_content": content,
           "image_url": imageUrl,
+          // 🚀 এখানে আমরা পাঠাচ্ছি পোস্টটি ডাইরেক্ট লিংক কিনা
+          "is_direct_link": isDirectLink.value ? 1 : 0,
         }),
       );
 
@@ -61,8 +65,8 @@ class CreatePostController extends GetxController {
       if (response.statusCode == 200 && data['status'] == 'success') {
         Get.snackbar("Success", "Post created successfully!");
         postTitleCtrl.clear();
+        isDirectLink.value = false; // রিসেট
 
-        // ফিড রিফ্রেশ করা
         if (Get.isRegistered<GetPostController>()) {
           Get.find<GetPostController>().getAllPost();
         }
@@ -79,17 +83,15 @@ class CreatePostController extends GetxController {
     }
   }
 
-  // ইমেজ আপলোড ফাংশন (Web Safe)
+  // ইমেজ আপলোড ফাংশন (আগের মতোই)
   Future<String?> _uploadImage(XFile xfile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(Urls.uploadImageApi));
 
       if (kIsWeb) {
-        // ✅ ওয়েবের জন্য: বাইটস হিসেবে পাঠানো
         var bytes = await xfile.readAsBytes();
         request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: xfile.name));
       } else {
-        // ✅ মোবাইলের জন্য: পাথ হিসেবে পাঠানো
         request.files.add(await http.MultipartFile.fromPath('image', xfile.path));
       }
 
@@ -102,10 +104,8 @@ class CreatePostController extends GetxController {
           return json['image_url'];
         }
       }
-      print("Upload Failed: ${response.body}");
       return null;
     } catch (e) {
-      print("Upload Exception: $e");
       return null;
     }
   }

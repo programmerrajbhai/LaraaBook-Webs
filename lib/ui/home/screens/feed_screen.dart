@@ -419,10 +419,8 @@ class _FeedScreenState extends State<FeedScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        (post.full_name != null && post.full_name!.isNotEmpty)
-                            ? post.full_name!
-                            : "ID: ${post.user_id ?? 'Unknown'}",
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        post.full_name ?? post.username ?? "Unknown User",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
                         _formatTimeAgo(post.created_at),

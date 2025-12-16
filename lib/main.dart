@@ -4,34 +4,43 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'package:app_links/app_links.dart';
-import 'package:meetyarah/ui/home/screens/baseScreens.dart';
-import 'package:meetyarah/ui/login_reg_screens/screens/login_screen.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-// ❌ ভুল: সরাসরি ওয়েব প্যাকেজ ইমপোর্ট করবেন না
-// import 'package:webview_flutter_web/webview_flutter_web.dart';
+// ✅ Firebase & Analytics Import
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
-// ✅ সঠিক: কন্ডিশনাল ইমপোর্ট (ওয়েব হলে web_config.dart, না হলে web_config_stub.dart নিবে)
+import 'package:meetyarah/ui/home/screens/baseScreens.dart';
+import 'package:meetyarah/ui/login_reg_screens/screens/login_screen.dart';
+
+// ✅ Conditional Import for Web
 import 'package:meetyarah/web_config/web_config_stub.dart'
 if (dart.library.html) 'package:meetyarah/web_config/web_config.dart';
 
 import 'package:meetyarah/ui/reels/screens/reel_screens.dart';
 import 'package:meetyarah/ui/splashScreens/screens/splash_screens.dart';
 import 'package:meetyarah/ui/home/models/get_post_model.dart';
-
 import 'package:meetyarah/ui/login_reg_screens/controllers/auth_service.dart';
 import 'package:meetyarah/ui/view_post/screens/post_details.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ ১. ওয়েব হলে রেজিস্টার করবে, মোবাইল হলে কিছুই করবে না (অটোমেটিক হ্যান্ডেল হবে)
+  // ✅ ১. Firebase Initialize (Analytics এর জন্য জরুরি)
+  try {
+    await Firebase.initializeApp();
+    print("✅ Firebase Initialized Successfully");
+  } catch (e) {
+    print("⚠️ Firebase Init Error: $e");
+  }
+
+  // ✅ ২. ওয়েব হলে রেজিস্টার করবে, মোবাইল হলে স্কিপ করবে
   registerWebView();
 
-  // ✅ ২. Auth Service ইনিশিয়ালাইজেশন
+  // ✅ ৩. Auth Service ইনিশিয়ালাইজেশন
   await Get.putAsync(() => AuthService().init());
 
-  // ✅ ৩. স্ট্রাইপ সেটআপ
+  // ✅ ৪. স্ট্রাইপ সেটআপ
   try {
     Stripe.publishableKey = 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
     await Stripe.instance.applySettings();
@@ -51,6 +60,11 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late AppLinks _appLinks;
+
+  // ✅ Analytics Instance
+  static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  static FirebaseAnalyticsObserver observer =
+  FirebaseAnalyticsObserver(analytics: analytics);
 
   @override
   void initState() {
@@ -85,7 +99,11 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'LARABOOKS',
+      title: 'Larabook', // অ্যাপের নাম আপডেট করা হলো
+
+      // ✅ Analytics Observer যোগ করা হলো (অটোমেটিক পেজ ট্র্যাকিং এর জন্য)
+      navigatorObservers: <NavigatorObserver>[observer],
+
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         dragDevices: {
           PointerDeviceKind.mouse,

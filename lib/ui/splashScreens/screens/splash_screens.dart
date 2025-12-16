@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:meetyarah/assetsPath/image_url.dart'; // আপনার ইমেজের পাথ
+import '../../../logo_widget.dart';
 import '../controllers/splash_controllers.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -16,16 +17,24 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // আপনার লোগো
-            Image.asset(
-              ImagePath.appLogotransparent,
-              width: Get.width * 0.6,
-            ),
-            const SizedBox(height: 20),
-            // একটি লোডিং ইন্ডিকেটর (অপশনাল)
-            const CircularProgressIndicator(
-              color: Colors.indigoAccent,
-            ),
+            // ব্যবহার করার উদাহরণ
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  LarabookLogo(size: 120), // লোগো উইজেট
+                  SizedBox(height: 20),
+                  Text(
+                    "Larabook",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1877F2),
+                    ),
+                  ),
+                ],
+              ),
+            )
           ],
         ),
       ),

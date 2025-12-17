@@ -34,7 +34,7 @@ class _FeedScreenState extends State<FeedScreen> {
   final adController = Get.put(AdsterraController());
 
   final bool _showDemoAds = kDebugMode;
-  final String _directLinkUrl = "https://www.google.com";
+  final String _directLinkUrl = "https://otieu.com/4/10229034";
   int _clickCount = 0;
 
   // ✅ ভিডিও লিস্ট রাখার জন্য ভেরিয়েবল

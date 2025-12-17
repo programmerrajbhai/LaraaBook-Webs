@@ -6,6 +6,9 @@ import 'package:get/get.dart';
 import 'package:app_links/app_links.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+// ✅ Firebase Options Import (এটি এখন কাজ করবে কারণ ফাইলটি তৈরি হয়েছে)
+import 'firebase_options.dart';
+
 // ✅ Firebase & Analytics Import
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -23,21 +26,25 @@ import 'package:meetyarah/ui/home/models/get_post_model.dart';
 import 'package:meetyarah/ui/login_reg_screens/controllers/auth_service.dart';
 import 'package:meetyarah/ui/view_post/screens/post_details.dart';
 
+// ✅ সংশোধন: main() এর ব্র্যাকেটের ভেতর ফাঁকা রাখুন
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ ১. Firebase Initialize (Analytics এর জন্য জরুরি)
+  // ✅ ১. Firebase Initialize
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      // এখন এটি সঠিকভাবে imported ক্লাস থেকে ডাটা পাবে
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     print("✅ Firebase Initialized Successfully");
   } catch (e) {
     print("⚠️ Firebase Init Error: $e");
   }
 
-  // ✅ ২. ওয়েব হলে রেজিস্টার করবে, মোবাইল হলে স্কিপ করবে
+  // ✅ ২. ওয়েব কনফিগারেশন
   registerWebView();
 
-  // ✅ ৩. Auth Service ইনিশিয়ালাইজেশন
+  // ✅ ৩. Auth Service
   await Get.putAsync(() => AuthService().init());
 
   // ✅ ৪. স্ট্রাইপ সেটআপ
@@ -99,9 +106,9 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Larabook', // অ্যাপের নাম আপডেট করা হলো
+      title: 'Larabook',
 
-      // ✅ Analytics Observer যোগ করা হলো (অটোমেটিক পেজ ট্র্যাকিং এর জন্য)
+      // ✅ Analytics Observer
       navigatorObservers: <NavigatorObserver>[observer],
 
       scrollBehavior: const MaterialScrollBehavior().copyWith(
